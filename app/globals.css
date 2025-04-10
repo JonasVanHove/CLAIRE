@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #121212;
+    --foreground: #e0e0e0;
+    --card: #1e1e1e;
+    --card-foreground: #e0e0e0;
+    --popover: #1e1e1e;
+    --popover-foreground: #e0e0e0;
+    --primary: #75b265;
+    --primary-foreground: #121212;
+    --secondary: #2a2a2a;
+    --secondary-foreground: #e0e0e0;
+    --muted: #2a2a2a;
+    --muted-foreground: #a0a0a0;
+    --accent: #2a2a2a;
+    --accent-foreground: #e0e0e0;
+    --destructive: #ff6961;
+    --destructive-foreground: #121212;
+    --border: #333333;
+    --input: #333333;
+    --ring: #75b265;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Class filter buttons styling - using regular CSS instead of @apply */
+.class-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid;
+  border-color: #e5e7eb;
+  background-color: white;
+}
+
+.dark .class-filter-buttons {
+  border-color: #333333;
+  background-color: #1e1e1e;
+}
+
+.class-filter-button {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  transition-property: color, background-color, border-color;
+  transition-duration: 200ms;
+}
+
+.class-filter-button:hover {
+  background-color: #e5e7eb;
+}
+
+.dark .class-filter-button {
+  background-color: #2a2a2a;
+  border-color: #333333;
+  color: #e0e0e0;
+}
+
+.dark .class-filter-button:hover {
+  background-color: #333333;
+}
+
+.class-filter-button.active {
+  background-color: #ece6f0;
+  border-color: #49454f;
+  color: #49454f;
+  font-weight: 600;
+}
+
+.dark .class-filter-button.active {
+  background-color: #3a3a3a;
+  border-color: #75b265;
+  color: #75b265;
+}
+
+/* Verwijder de algemene scrollbar */
+body {
+  overflow-x: hidden;
+}
+
+/* Styling voor scrollbars in containers */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(75, 85, 99, 0.5);
+}
+
+/* Enhanced scrollbar styling for dark mode */
+.dark .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #333333;
+  border-radius: 3px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #555555;
+  border-radius: 3px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #666666;
+}
+
+/* Firefox scrollbar styling for dark mode */
+.dark .custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #555555 #333333;
+}
+
+/* Custom accordion animation */
+.competency-content-enter {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  overflow: hidden;
+}
+
+.competency-content-enter-active {
+  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.competency-content-exit {
+  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.competency-content-exit-active {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+/* Enhanced accordion animation */
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s
+    cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.accordion-content-collapsed {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.accordion-content-expanded {
+  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: absolute;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.tooltip-visible {
+  opacity: 1;
+}
+
+/* Hover effects for interactive elements */
+.hover-scale {
+  transition: transform 0.15s ease-in-out;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-shadow {
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.hover-shadow:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dark .hover-shadow:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.12);
+}
