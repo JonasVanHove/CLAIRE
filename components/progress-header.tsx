@@ -81,81 +81,134 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-2">
         <div className="text-base font-medium dark:text-gray-200">Competenties behaald</div>
         <div className="text-base font-medium dark:text-gray-200">
-          {achieved}/{total}
+          {selectedStudent ? `${achieved}/${total}` : "0/0"}
         </div>
       </div>
 
       <Progress
-        value={percentage}
+        value={selectedStudent ? percentage : 0}
         className="h-2 mb-4 bg-gray-200 dark:bg-gray-700"
         style={{ backgroundColor: "#e5e7eb" }}
       >
-        <div className="h-full bg-[#75b265] dark:bg-[#75b265]" style={{ width: `${percentage}%` }}></div>
+        <div
+          className="h-full bg-[#75b265] dark:bg-[#75b265]"
+          style={{ width: `${selectedStudent ? percentage : 0}%` }}
+        ></div>
       </Progress>
 
       <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex items-start gap-4">
-          <ProfileImage src={profileImage} alt={selectedStudent} className="w-16 h-16 hidden sm:block" />
+          <ProfileImage
+            src={selectedStudent ? profileImage : "/placeholder.svg"}
+            alt={selectedStudent || "Geen leerling geselecteerd"}
+            className="w-16 h-16 hidden sm:block"
+          />
           <div className="flex-1">
-            <div className="text-base font-medium mb-1 dark:text-gray-200">{selectedStudent}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Klas: {selectedClass}</div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="text-sm font-medium dark:text-gray-200">Status:</div>
-              {isTrulyAtRisk && (
-                <div className="relative group">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                    {atRiskReason} (onder individuele doelstelling van {individualGoal}%)
+            <div className="text-base font-medium mb-1 dark:text-gray-200">
+              {selectedStudent || "Geen leerling geselecteerd"}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              {selectedStudent ? `Klas: ${selectedClass}` : "Selecteer een leerling"}
+            </div>
+            {selectedStudent ? (
+              <div className="flex items-center gap-2 mb-2">
+                <div className="text-sm font-medium dark:text-gray-200">Status:</div>
+                {isTrulyAtRisk && (
+                  <div className="relative group">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                      {atRiskReason} (onder individuele doelstelling van {individualGoal}%)
+                    </div>
                   </div>
-                </div>
-              )}
-              {attendanceData.present < attendanceThreshold && (
-                <div className="relative group">
-                  <Clock className="h-4 w-4 text-blue-500" />
-                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                    Aanwezigheid ({attendanceData.present}%) is onder de grenswaarde ({attendanceThreshold}%)
+                )}
+                {attendanceData.present < attendanceThreshold && (
+                  <div className="relative group">
+                    <Clock className="h-4 w-4 text-blue-500" />
+                    <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                      Aanwezigheid ({attendanceData.present}%) is onder de grenswaarde ({attendanceThreshold}%)
+                    </div>
                   </div>
-                </div>
-              )}
-              <div className="flex items-center gap-2 relative group">
-                <CheckCircle2
-                  className={`h-4 w-4 ${
-                    !isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
-                      ? "text-green-500"
-                      : "text-gray-400"
-                  }`}
-                />
-                <span
-                  className={`text-xs ${
-                    !isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
-                      ? "font-medium text-green-600 dark:text-green-400"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
-                >
-                  {!isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
-                    ? "Binnen doelstelling"
-                    : "Evaluatie nodig"}
-                </span>
-                {/* Tooltip that appears on hover */}
-                <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                  <p className="mb-1">Status berekening:</p>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    <li>
-                      Competenties: {formattedPercentage}% {percentage >= individualGoal ? "✓" : "✗"} (doel:{" "}
-                      {individualGoal}%)
-                    </li>
-                    <li>
-                      Aanwezigheid: {attendanceData.present}%{" "}
-                      {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} (doel: {attendanceThreshold}%)
-                    </li>
-                    <li>Persoonlijk gemiddelde: {isAboveAverage ? "✓" : "✗"}</li>
-                  </ul>
+                )}
+                <div className="flex items-center gap-2 relative group">
+                  <CheckCircle2
+                    className={`h-4 w-4 ${
+                      !isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
+                        ? "text-green-500"
+                        : "text-gray-400"
+                    }`}
+                  />
+                  <span
+                    className={`text-xs ${
+                      !isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
+                        ? "font-medium text-green-600 dark:text-green-400"
+                        : "text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    {!isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
+                      ? "Binnen doelstelling"
+                      : "Evaluatie nodig"}
+                  </span>
+                  {/* Tooltip that appears on hover */}
+                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                    <p className="mb-1">Status berekening:</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>
+                        Competenties: {formattedPercentage}% {percentage >= individualGoal ? "✓" : "✗"} (doel:{" "}
+                        {individualGoal}%)
+                      </li>
+                      <li>
+                        Aanwezigheid: {attendanceData.present}%{" "}
+                        {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} (doel: {attendanceThreshold}%)
+                      </li>
+                      <li>Persoonlijk gemiddelde: {isAboveAverage ? "✓" : "✗"}</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Gebruik het zoekveld bovenaan om een leerling te selecteren
+              </div>
+            )}
           </div>
         </div>
       </Card>
+
+      {/* Semester Averages Section */}
+      {selectedStudent && (
+        <div className="mt-2 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2">
+          <div className="text-xs font-medium mb-1 dark:text-gray-200">Gemiddeldes per semester</div>
+          <div className="flex items-center justify-between gap-2">
+            {[1, 2, 3].map((semester) => {
+              // Calculate average for this semester
+              const semesterData = getStudentSemesterData(selectedStudent, semester as 1 | 2 | 3)
+              const avgScore =
+                semesterData.length > 0
+                  ? semesterData.reduce((sum, item) => sum + item.result.score.raw, 0) / semesterData.length
+                  : 0
+
+              // Determine color based on score
+              const getColor = (score: number) => {
+                if (score < 50) return "bg-red-500"
+                if (score < 70) return "bg-amber-500"
+                return "bg-green-500"
+              }
+
+              return (
+                <div key={semester} className="flex-1">
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="dark:text-gray-300">S{semester}</span>
+                    <span className="dark:text-gray-300">{avgScore.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className={`h-full ${getColor(avgScore)}`} style={{ width: `${avgScore}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

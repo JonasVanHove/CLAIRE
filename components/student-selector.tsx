@@ -74,12 +74,12 @@ export function StudentSelector() {
 
   const toggleAtRiskFilter = () => {
     setShowOnlyAtRisk(!showOnlyAtRisk)
-    // Remove the line that disables the other filter
+    // Remove the code that turns off the other filter
   }
 
   const toggleAttendanceRiskFilter = () => {
     setShowOnlyAttendanceRisk(!showOnlyAttendanceRisk)
-    // Remove the line that disables the other filter
+    // Remove the code that turns off the other filter
   }
 
   // Split students into two columns
@@ -151,7 +151,7 @@ export function StudentSelector() {
         <input
           type="text"
           className="block w-full pl-10 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-[#ECE6F0] dark:focus:ring-[#75b265] focus:border-[#ECE6F0] dark:focus:border-[#75b265]"
-          placeholder="Zoek een leerling..."
+          placeholder="Zoek en selecteer een leerling..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setIsOpen(true)}
@@ -169,45 +169,50 @@ export function StudentSelector() {
           style={{ maxHeight: "calc(70vh)" }}
         >
           <div className="class-filter-buttons dark:bg-gray-800 dark:border-gray-700 flex flex-wrap gap-1 p-2 border-b border-gray-200 dark:border-gray-700">
-            {classes.map((className) => (
+            <div className="w-full flex flex-wrap gap-1 mb-2">
+              {classes.map((className) => (
+                <button
+                  key={className}
+                  onClick={() => toggleFilter(className)}
+                  className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
+                    activeFilters.includes(className)
+                      ? "bg-[#49454F] text-white font-medium border-2 border-[#49454F] shadow-md transform scale-105"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+                  } transition-all duration-150`}
+                >
+                  {className}
+                </button>
+              ))}
+            </div>
+
+            <div className="w-full flex flex-wrap gap-1">
               <button
-                key={className}
-                onClick={() => toggleFilter(className)}
+                onClick={toggleAtRiskFilter}
                 className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
-                  activeFilters.includes(className)
-                    ? "bg-[#49454F] text-white font-medium border-2 border-[#49454F] shadow-md transform scale-105"
+                  showOnlyAtRisk
+                    ? "bg-amber-500 text-white font-medium border-2 border-amber-500 shadow-md transform scale-105"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
                 } transition-all duration-150`}
               >
-                {className}
+                <div className="flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>At Risk</span>
+                </div>
               </button>
-            ))}
-            <button
-              onClick={toggleAtRiskFilter}
-              className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
-                showOnlyAtRisk
-                  ? "bg-amber-500 text-white font-medium border-2 border-amber-500 shadow-md transform scale-105"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-              } transition-all duration-150`}
-            >
-              <div className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                <span>At Risk</span>
-              </div>
-            </button>
-            <button
-              onClick={toggleAttendanceRiskFilter}
-              className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
-                showOnlyAttendanceRisk
-                  ? "bg-blue-500 text-white font-medium border-2 border-blue-500 shadow-md transform scale-105"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-              } transition-all duration-150`}
-            >
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span>Afwezigheidsrisico</span>
-              </div>
-            </button>
+              <button
+                onClick={toggleAttendanceRiskFilter}
+                className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
+                  showOnlyAttendanceRisk
+                    ? "bg-blue-500 text-white font-medium border-2 border-blue-500 shadow-md transform scale-105"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+                } transition-all duration-150`}
+              >
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>Afwezigheidsrisico</span>
+                </div>
+              </button>
+            </div>
           </div>
 
           {studentGroups.length > 0 ? (

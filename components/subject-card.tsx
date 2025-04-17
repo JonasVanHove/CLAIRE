@@ -5,8 +5,6 @@ import { useUI } from "@/contexts/ui-context"
 import { useState, useEffect, useRef } from "react"
 import { CompetencyDetail } from "./competency-detail"
 import { generateMockCompetencies } from "@/data/student-data"
-import { useActivities } from "@/hooks/use-data"
-import { useStudent } from "@/contexts/student-context"
 
 interface SubjectCardProps {
   subject: string
@@ -38,10 +36,6 @@ export function SubjectCard({
   const { hideNonCompleted, showCharts, showWarnings } = useUI()
   const [isExpanded, setIsExpanded] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
-  const { selectedStudent } = useStudent() // Moved hook call outside conditional block
-  // Make sure semester is defined before passing it to useActivities
-  const currentSemester = semester || 1 // Default to semester 1 if undefined
-  const { activities: subjectActivities, loading } = useActivities(selectedStudent, subject, currentSemester)
 
   // Parse competencies string (format: "17/21")
   const [achieved, total] = competencies.split("/").map(Number)
@@ -154,13 +148,7 @@ export function SubjectCard({
         </div>
 
         <div className="px-2 text-xs text-gray-500 dark:text-gray-400 text-center leading-6 pb-0 mb-0">
-          {loading ? (
-            // Show loading indicator while fetching data
-            <span>Laden...</span>
-          ) : (
-            // Display the count from database when available, otherwise fall back to prop
-            `${subjectActivities && subjectActivities.length > 0 ? subjectActivities.length : activities} activiteiten`
-          )}
+          {activities} activiteiten
         </div>
       </Card>
 

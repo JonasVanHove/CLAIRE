@@ -154,7 +154,7 @@ export function SubjectActivitiesTab({ subject, activities, semester }: SubjectA
                         onClick={() => toggleActivityExpansion(activity.id)}
                         className="text-blue-500 dark:text-blue-400 hover:underline flex items-center gap-1"
                       >
-                        <span>Competentie: {activity.competencyId}</span>
+                        <span>Competenties:</span>
                         {expandedActivities.includes(activity.id) ? (
                           <ChevronDown className="h-3 w-3" />
                         ) : (
@@ -165,19 +165,76 @@ export function SubjectActivitiesTab({ subject, activities, semester }: SubjectA
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Score</div>
-                  <div
-                    className={`text-lg font-bold ${
-                      activity.evaluated ? getScoreColor(activity.score, activity.maxScore) : "text-gray-400"
-                    }`}
-                  >
-                    {activity.evaluated
-                      ? `${activity.score}/${activity.maxScore}`
-                      : activity.completed
-                        ? "Nog niet geëvalueerd"
-                        : "Niet afgelegd"}
+                <div className="flex items-start gap-4">
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Score</div>
+                    <div
+                      className={`text-lg font-bold ${
+                        activity.evaluated ? getScoreColor(activity.score, activity.maxScore) : "text-gray-400"
+                      }`}
+                    >
+                      {activity.evaluated
+                        ? `${activity.score}/${activity.maxScore}`
+                        : activity.completed
+                          ? "Nog niet geëvalueerd"
+                          : "Niet afgelegd"}
+                    </div>
                   </div>
+
+                  {activity.evaluated && (
+                    <div className="flex flex-col items-center">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"></div>
+                      <div className="flex items-end h-16 gap-1">
+                        {/* Low performers bar (red) */}
+                        <div className="flex flex-col items-center">
+                          <div
+                            className="w-6 bg-red-500 rounded-t-sm"
+                            style={{
+                              height: `${Math.max(5, activity.classDistribution.lowPerformers)}px`,
+                              opacity: activity.score / activity.maxScore < 0.5 ? 1 : 0.5,
+                            }}
+                          ></div>
+                          {activity.score / activity.maxScore < 0.5 && (
+                            <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-t-black border-l-transparent border-r-transparent mt-1"></div>
+                          )}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">0-50%</span>
+                        </div>
+
+                        {/* Medium performers bar (amber) */}
+                        <div className="flex flex-col items-center">
+                          <div
+                            className="w-6 bg-amber-500 rounded-t-sm"
+                            style={{
+                              height: `${Math.max(5, activity.classDistribution.mediumPerformers)}px`,
+                              opacity:
+                                activity.score / activity.maxScore >= 0.5 && activity.score / activity.maxScore < 0.7
+                                  ? 1
+                                  : 0.5,
+                            }}
+                          ></div>
+                          {activity.score / activity.maxScore >= 0.5 && activity.score / activity.maxScore < 0.7 && (
+                            <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-t-black border-l-transparent border-r-transparent mt-1"></div>
+                          )}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">50-70%</span>
+                        </div>
+
+                        {/* High performers bar (green) */}
+                        <div className="flex flex-col items-center">
+                          <div
+                            className="w-6 bg-green-500 rounded-t-sm"
+                            style={{
+                              height: `${Math.max(5, activity.classDistribution.highPerformers)}px`,
+                              opacity: activity.score / activity.maxScore >= 0.7 ? 1 : 0.5,
+                            }}
+                          ></div>
+                          {activity.score / activity.maxScore >= 0.7 && (
+                            <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-t-black border-l-transparent border-r-transparent mt-1"></div>
+                          )}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">70-100%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -212,23 +269,56 @@ export function SubjectActivitiesTab({ subject, activities, semester }: SubjectA
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                   <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Gekoppelde competentie
+                      Gekoppelde competenties
                     </h4>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      <div className="flex items-start gap-2 mb-1">
-                        <div className="font-medium min-w-[80px]">ID:</div>
-                        <div>{activity.competencyId}</div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <div className="font-medium min-w-[80px]">Beschrijving:</div>
-                        <div>
-                          {/* This would come from the competency data in a real implementation */}
-                          {activity.competencyId.startsWith("COMP")
-                            ? "Globale competentie die in meerdere vakken wordt toegepast"
-                            : "Vakspecifieke competentie voor " + subject}
-                        </div>
-                      </div>
-                    </div>
+
+                    {/* In a real implementation, this would map over an array of competencies */}
+                    {/* For now, we'll simulate having 1-3 competencies */}
+                    {(() => {
+                      // Mock data - in a real implementation, this would come from the activity
+                      const mockCompetencies = [
+                        {
+                          id: activity.competencyId,
+                          title: activity.competencyId.startsWith("COMP")
+                            ? "Kan complexe problemen analyseren en oplossen"
+                            : "Kan wiskundige technieken toepassen in fysische contexten",
+                        },
+                      ]
+
+                      // Add some mock additional competencies based on the activity ID to simulate variation
+                      if (activity.id.includes("1") || activity.id.includes("3")) {
+                        mockCompetencies.push({
+                          id: "COMP-002",
+                          title: "Kan effectief communiceren in verschillende contexten",
+                        })
+                      }
+
+                      if (activity.id.includes("2") || activity.id.includes("5")) {
+                        mockCompetencies.push({
+                          id: "COMP-007",
+                          title: "Kan creatief denken en innoveren",
+                        })
+                      }
+
+                      return mockCompetencies.length > 0 ? (
+                        <ul className="space-y-2">
+                          {mockCompetencies.map((comp, index) => (
+                            <li key={comp.id} className="text-sm text-gray-600 dark:text-gray-300">
+                              <div className="flex items-start gap-2">
+                                <div className="font-medium min-w-[30px]">{index + 1}.</div>
+                                <div>
+                                  <span className="font-medium">{comp.id}</span> - {comp.title}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          Geen competenties gekoppeld aan deze activiteit.
+                        </p>
+                      )
+                    })()}
                   </div>
                 </div>
               )}

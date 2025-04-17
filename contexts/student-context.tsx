@@ -14,7 +14,7 @@ interface StudentContextType {
 const StudentContext = createContext<StudentContextType | undefined>(undefined)
 
 export function StudentProvider({ children }: { children: React.ReactNode }) {
-  const [selectedStudent, setSelectedStudent] = useState("Marc Vertongen")
+  const [selectedStudent, setSelectedStudent] = useState("")
   const [selectedClass, setSelectedClass] = useState("3STEM")
 
   return (

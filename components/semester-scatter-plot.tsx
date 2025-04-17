@@ -46,100 +46,151 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
     // Set up dimensions
     const width = rect.width
     const height = rect.height
-    const paddingX = 40 // Increased horizontal padding for labels
-    const paddingTop = 15 // Reduced top padding
-    const paddingBottom = 15 // Reduced bottom padding
-    const plotWidth = width - paddingX * 2
-    const plotHeight = height - paddingTop - paddingBottom
+    const padding = 25
+    const plotWidth = width - padding * 2
+    const plotHeight = height - padding * 2
+
+    // Define score range from 20 to 100
+    const minScore = 20
+    const maxScore = 100
+    const scoreRange = maxScore - minScore
+
+    // Define score buckets in steps of 10 (20-30, 30-40, etc.)
+    const bucketSize = 10 // Each bucket is 10 points wide
+    const numBuckets = scoreRange / bucketSize
 
     // Draw y-axis labels
     ctx.fillStyle = darkMode ? "#a0a0a0" : "#666"
-    ctx.font = "11px Inter" // Slightly larger font
+    ctx.font = "10px Inter"
     ctx.textAlign = "right"
 
-    const yLabels = ["100", "80", "60", "40", "20"]
-    const yStep = plotHeight / (yLabels.length - 1)
-
-    yLabels.forEach((label, i) => {
-      const y = paddingTop + i * yStep
-      ctx.fillText(label, paddingX - 8, y + 3) // Increased spacing between labels and plot
+    // Draw labels at 20-point intervals
+    for (let score = minScore; score <= maxScore; score += 20) {
+      const normalizedScore = (score - minScore) / scoreRange
+      const y = padding + plotHeight * (1 - normalizedScore)
+      ctx.fillText(score.toString(), padding - 5, y + 3)
 
       // Draw light horizontal grid lines
       ctx.strokeStyle = darkMode ? "#333333" : "#e5e5e5"
       ctx.beginPath()
-      ctx.moveTo(paddingX, y)
-      ctx.lineTo(width - paddingX - 15, y) // Make lines end 15px earlier on the right
+      ctx.moveTo(padding, y)
+      ctx.lineTo(width - padding - 10, y)
       ctx.stroke()
-    })
+    }
 
-    // If no data, show placeholder dots
-    if (!data || data.length === 0) {
+    // If no data or no selected student, draw empty chart with grid
+    if (!data || data.length === 0 || !data.some((student) => student.isCurrentStudent)) {
+      // Draw empty chart with grid only
       return
     }
 
-    // Calculate x positions with a natural distribution
-    const centerX = paddingX + plotWidth / 2
-    const xSpread = plotWidth * 0.8 // Use 80% of the plot width for the spread
+    // Group students by score buckets
+    const buckets = Array(numBuckets)
+      .fill(0)
+      .map(() => [])
 
-    // Sort data by score to ensure consistent positioning
-    const sortedData = [...data].sort((a, b) => a.score - b.score)
-
-    // Draw non-current student dots first
-    sortedData.forEach((point, index) => {
-      if (point.isCurrentStudent) return // Skip current student for now
-
-      // Convert score to y position (100 at top, 0 at bottom)
-      const yPos = paddingTop + plotHeight - (plotHeight * point.score) / 100
-
-      // Create a bell curve-like distribution on x-axis
-      // More dots in the middle, fewer at the edges
-      const normalizedPos = (index / sortedData.length) * 2 - 1 // -1 to 1
-      const xOffset = Math.sin(normalizedPos * Math.PI) * (xSpread / 2)
-      const xPos = centerX + xOffset + (Math.random() * 4 - 2) // Add small random jitter
-
-      // Draw the dot
-      ctx.beginPath()
-      ctx.arc(xPos, yPos, 3, 0, Math.PI * 2)
-
-      // Vary the opacity slightly for visual interest
-      const opacity = 0.7 + Math.random() * 0.3
-      ctx.fillStyle = darkMode ? `rgba(100, 149, 237, ${opacity})` : `rgba(65, 105, 225, ${opacity})`
-      ctx.fill()
+    // Place each student in the appropriate bucket
+    data.forEach((student) => {
+      // Ensure score is within our range
+      const clampedScore = Math.max(minScore, Math.min(maxScore, student.score))
+      const bucketIndex = Math.floor((clampedScore - minScore) / bucketSize)
+      if (bucketIndex >= 0 && bucketIndex < numBuckets) {
+        buckets[bucketIndex].push(student)
+      }
     })
 
-    // Now draw the current student dot on top
-    const currentStudent = sortedData.find((point) => point.isCurrentStudent)
-    if (currentStudent) {
-      // Find the position of the current student in the sorted array
-      const index = sortedData.findIndex((point) => point.isCurrentStudent)
+    // Define the diamond pattern - how many dots should be in each row
+    // This creates a diamond shape with more dots in the middle rows
+    const dotCounts = [1, 2, 3, 5, 7, 8, 7, 5, 3, 2, 1] // Diamond pattern for 8 buckets
 
-      // Convert score to y position (100 at top, 0 at bottom)
-      const yPos = paddingTop + plotHeight - (plotHeight * currentStudent.score) / 100
+    // Calculate the dot size based on available space
+    const dotSize = 6.5 // Significantly larger dots for better visibility
+    const dotSpacing = 4 // Increased spacing to accommodate larger dots
 
-      // Create a bell curve-like distribution on x-axis
-      const normalizedPos = (index / sortedData.length) * 2 - 1 // -1 to 1
-      const xOffset = Math.sin(normalizedPos * Math.PI) * (xSpread / 2)
-      const xPos = centerX + xOffset
+    // Find which bucket contains the current student
+    const currentStudentBucket = buckets.findIndex((bucket) => bucket.some((student) => student.isCurrentStudent))
 
-      // Draw the current student dot
-      ctx.beginPath()
-      ctx.arc(xPos, yPos, 5, 0, Math.PI * 2)
-      ctx.fillStyle = "#49454F" // Gebruik de gevraagde kleur
-      ctx.fill()
+    // Draw dots for each bucket
+    buckets.forEach((bucket, bucketIndex) => {
+      if (bucket.length === 0) return
 
-      // Add a border to make it stand out more
-      ctx.strokeStyle = darkMode ? "#333333" : "#ffffff"
-      ctx.lineWidth = 1.5
-      ctx.stroke()
-    }
+      // Calculate y position for this bucket
+      const bucketScore = minScore + bucketIndex * bucketSize + bucketSize / 2
+      const normalizedScore = (bucketScore - minScore) / scoreRange
+      const y = padding + plotHeight * (1 - normalizedScore)
+
+      // Get ideal number of dots for this row in the diamond pattern
+      const idealDotCount = dotCounts[Math.min(bucketIndex, dotCounts.length - 1)]
+
+      // Determine how many dots to actually draw (either all students or max for diamond pattern)
+      const dotsToShow = Math.min(bucket.length, idealDotCount)
+
+      // Calculate total width needed for this row
+      const rowWidth = dotsToShow * (dotSize * 2 + dotSpacing) - dotSpacing
+
+      // Center the row
+      const startX = width / 2 - rowWidth / 2
+
+      // Highlight the entire bucket if it contains the selected student
+      if (bucketIndex === currentStudentBucket) {
+        // Draw a highlight background for this bucket
+        ctx.fillStyle = darkMode ? "rgba(100, 150, 230, 0.2)" : "rgba(65, 105, 225, 0.15)"
+        ctx.beginPath()
+        ctx.rect(
+          padding,
+          y - (bucketSize * plotHeight) / scoreRange / 2,
+          plotWidth,
+          (bucketSize * plotHeight) / scoreRange,
+        )
+        ctx.fill()
+      }
+
+      // Draw non-current student dots first
+      let currentStudentIndex = -1
+      bucket.forEach((student, index) => {
+        if (student.isCurrentStudent) {
+          currentStudentIndex = index
+          return // Skip current student for now
+        }
+
+        // Only draw up to the ideal dot count for this row
+        if (index >= idealDotCount) return
+
+        // Calculate x position with even spacing
+        const xPos = startX + index * (dotSize * 2 + dotSpacing) + dotSize
+
+        // Draw the dot
+        ctx.beginPath()
+        ctx.arc(xPos, y, dotSize, 0, Math.PI * 2)
+
+        // Use accent color for other students
+        ctx.fillStyle = darkMode ? `rgba(73, 69, 79, 0.9)` : `rgba(73, 69, 79, 0.9)`
+        ctx.fill()
+      })
+
+      // Draw the current student if they're in this bucket
+      if (currentStudentIndex !== -1 && currentStudentIndex < idealDotCount) {
+        // Calculate x position with even spacing
+        const xPos = startX + currentStudentIndex * (dotSize * 2 + dotSpacing) + dotSize
+
+        // Draw the current student dot
+        ctx.beginPath()
+        ctx.arc(xPos, y, dotSize + 1.5, 0, Math.PI * 2)
+        ctx.fillStyle = "#3b82f6" // Change to blue color
+        ctx.fill()
+
+        // Add a border to make it stand out more
+        ctx.strokeStyle = darkMode ? "#333333" : "#ffffff"
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+      }
+    })
   }, [data, darkMode])
 
   return (
     <Card className="p-2 dark:bg-gray-800 dark:border-gray-700">
-      <div className="text-xs font-medium mb-0.5 dark:text-gray-200 text-center">{title}</div>
-      <div className="flex justify-center items-center">
-        <canvas ref={canvasRef} width={320} height={120} className="w-[320px] h-[120px] max-w-full" />
-      </div>
+      <div className="text-xs font-medium mb-1 dark:text-gray-200 text-center">{title}</div>
+      <canvas ref={canvasRef} width={240} height={120} className="w-full h-auto max-w-full mx-auto" />
     </Card>
   )
 }

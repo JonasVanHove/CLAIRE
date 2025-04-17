@@ -60,6 +60,15 @@ function DashboardContent() {
   const { achieved, total } = getTotalCompetencies(selectedStudent)
   const percentage = (achieved / total) * 100
 
+  // Near the beginning of the DashboardContent component, add this check
+  useEffect(() => {
+    // If no student is selected, show a message or prompt to select a student
+    if (!selectedStudent) {
+      // You could set a default view or show a message
+      // For now, we'll just let the UI handle the empty state
+    }
+  }, [selectedStudent])
+
   // Calculate if student is above their average
   useEffect(() => {
     // Bereken het gemiddelde van de vorige semesters
@@ -252,18 +261,19 @@ function DashboardContent() {
     return (
       <div
         className={`border rounded-md flex-1 dark:bg-gray-800 dark:border-gray-700 relative p-3 ${
-          !isActive ? "opacity-70 cursor-not-allowed" : ""
+          !isActive ? "opacity-60 pointer-events-none select-none" : ""
         }`}
         style={{
           height: "600px", // Changed from 750px to 600px to make it less tall
           overflow: "hidden", // Hide overflow for the container
-          pointerEvents: isActive ? "auto" : "none", // Disable interactions when not active
         }}
       >
         {!isActive && (
-          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center z-10">
-            <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-md text-gray-700 dark:text-gray-300 font-medium">
-              Selecteer dit semester om te bekijken
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-100/30 dark:bg-gray-900/30">
+            <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-md text-center">
+              <p className="text-gray-700 dark:text-gray-300 font-medium">
+                Klik op de tab hierboven om dit semester te bekijken
+              </p>
             </div>
           </div>
         )}
@@ -304,14 +314,19 @@ function DashboardContent() {
 
           <div className="relative" ref={profileRef}>
             <button
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-[#49454F] dark:text-gray-300"
-              onClick={() => setShowProfile(!showProfile)}
+              className={`p-2 rounded-md ${
+                selectedStudent
+                  ? "hover:bg-gray-100 dark:hover:bg-gray-700 text-[#49454F] dark:text-gray-300"
+                  : "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+              }`}
+              onClick={() => selectedStudent && setShowProfile(!showProfile)}
               aria-label="Toon profiel"
+              disabled={!selectedStudent}
             >
               <User className="h-5 w-5" />
             </button>
 
-            {showProfile && (
+            {showProfile && selectedStudent && (
               <div className="absolute left-0 mt-2 w-[500px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -654,14 +669,19 @@ function DashboardContent() {
 
           <div className="relative" ref={notesRef}>
             <button
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-[#49454F] dark:text-gray-300"
-              onClick={() => setShowNotes(!showNotes)}
+              className={`p-2 rounded-md ${
+                selectedStudent
+                  ? "hover:bg-gray-100 dark:hover:bg-gray-700 text-[#49454F] dark:text-gray-300"
+                  : "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+              }`}
+              onClick={() => selectedStudent && setShowNotes(!showNotes)}
               aria-label="Toon notities"
+              disabled={!selectedStudent}
             >
               <FileText className="h-5 w-5" />
             </button>
 
-            {showNotes && (
+            {showNotes && selectedStudent && (
               <div className="absolute left-0 mt-2 w-[400px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -815,9 +835,15 @@ function DashboardContent() {
       </header>
 
       <main className={`w-full px-4 py-2 ${compactView ? "max-w-screen-2xl mx-auto" : ""}`}>
-        <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
-          Positionering ten opzichte van medestudenten uit {selectedClass}
-        </h1>
+        {selectedStudent ? (
+          <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
+            Positionering ten opzichte van medestudenten uit {selectedClass}
+          </h1>
+        ) : (
+          <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
+            Positionering ten opzichte van medestudenten
+          </h1>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="md:col-span-1">
@@ -832,17 +858,17 @@ function DashboardContent() {
               <SemesterScatterPlot title="Semester 3" data={semesterScores[2]} />
             </div>
             <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Elke stip vertegenwoordigt een student. De donkere stip is {selectedStudent}.
+              Elke stip vertegenwoordigt een student. {selectedStudent && `De donkere stip is ${selectedStudent}.`}
             </div>
           </div>
         </div>
 
         <div className="overflow-hidden">
           <Tabs defaultValue="semester1" className="w-full" onValueChange={setActiveSemester}>
-            <TabsList className="grid grid-cols-3 mb-4 bg-gray-100 dark:bg-gray-800">
+            <TabsList className="grid grid-cols-3 mb-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border-0 p-1">
               <TabsTrigger
                 value="semester1"
-                className="text-base data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
+                className="text-base text-gray-600 dark:text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md data-[state=active]:border-b-2 data-[state=active]:border-blue-500 dark:data-[state=active]:border-blue-400 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 onClick={() => {
                   // Extract semester number from the tab value and store it
                   const semesterNum = 1
@@ -854,7 +880,7 @@ function DashboardContent() {
               </TabsTrigger>
               <TabsTrigger
                 value="semester2"
-                className="text-base data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
+                className="text-base text-gray-600 dark:text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md data-[state=active]:border-b-2 data-[state=active]:border-blue-500 dark:data-[state=active]:border-blue-400 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 onClick={() => {
                   // Extract semester number from the tab value and store it
                   const semesterNum = 2
@@ -866,7 +892,7 @@ function DashboardContent() {
               </TabsTrigger>
               <TabsTrigger
                 value="semester3"
-                className="text-base data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
+                className="text-base text-gray-600 dark:text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md data-[state=active]:border-b-2 data-[state=active]:border-blue-500 dark:data-[state=active]:border-blue-400 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 onClick={() => {
                   // Extract semester number from the tab value and store it
                   const semesterNum = 3
@@ -888,9 +914,24 @@ function DashboardContent() {
             ) : (
               // In regular view, show all semesters side by side
               <div className="grid grid-cols-3 gap-4">
-                {renderSemester(1, activeSemester === "semester1")}
-                {renderSemester(2, activeSemester === "semester2")}
-                {renderSemester(3, activeSemester === "semester3")}
+                {selectedStudent ? (
+                  <>
+                    {renderSemester(1, activeSemester === "semester1")}
+                    {renderSemester(2, activeSemester === "semester2")}
+                    {renderSemester(3, activeSemester === "semester3")}
+                  </>
+                ) : (
+                  <div className="col-span-3 flex items-center justify-center bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-8">
+                    <div className="text-center">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        Geen leerling geselecteerd
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
+                        Selecteer een leerling via het zoekveld bovenaan om de semestergegevens te bekijken.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </Tabs>
