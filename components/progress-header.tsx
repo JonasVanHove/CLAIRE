@@ -27,7 +27,7 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
   const profileImage = getStudentProfileImage(selectedStudent)
   const percentage = (achieved / total) * 100
   const formattedPercentage = percentage.toFixed(2)
-  const { darkMode } = useUI()
+  const { darkMode, language } = useUI()
   const atRisk = isStudentAtRisk(selectedStudent)
   const atRiskReason = getAtRiskReason(selectedStudent)
 
@@ -76,10 +76,60 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
   // Check if student is truly at risk based on individual goal
   const isTrulyAtRisk = atRisk && percentage < individualGoal
 
+  // Get competencies achieved per semester
+  const getCompetenciesPerSemester = () => {
+    const semesterData = [1, 2, 3].map((semester) => {
+      const data = getStudentSemesterData(selectedStudent, semester as 1 | 2 | 3)
+      let achieved = 0
+      let total = 0
+
+      data.forEach((statement) => {
+        if (statement.result.competencies) {
+          achieved += statement.result.competencies.achieved
+          total += statement.result.competencies.total
+        }
+      })
+
+      return {
+        semester,
+        achieved,
+        total,
+        percentage: total > 0 ? (achieved / total) * 100 : 0,
+      }
+    })
+
+    return semesterData
+  }
+
+  const semesterCompetencies = getCompetenciesPerSemester()
+
+  // Translations
+  const translations = {
+    en: {
+      competenciesAchieved: "Competencies achieved",
+      status: "Status",
+      withinTarget: "Within target",
+      evaluationNeeded: "Evaluation needed",
+      competenciesPerSemester: "Competencies per semester",
+      semester: "S",
+    },
+    nl: {
+      competenciesAchieved: "Competenties behaald",
+      status: "Status",
+      withinTarget: "Binnen doelstelling",
+      evaluationNeeded: "Evaluatie nodig",
+      competenciesPerSemester: "Competenties per semester",
+      semester: "S",
+    },
+  }
+
+  // Get translations based on current language
+  const t = translations[language]
+
   return (
     <div className="mb-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-2">
-        <div className="text-base font-medium dark:text-gray-200">Competenties behaald</div>
+        <div className="text-base font-medium dark:text-gray-200">{t.competenciesAchieved}</div>
         <div className="text-base font-medium dark:text-gray-200">
           {selectedStudent ? `${achieved}/${total}` : "0/0"}
         </div>
@@ -105,19 +155,27 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
           />
           <div className="flex-1">
             <div className="text-base font-medium mb-1 dark:text-gray-200">
-              {selectedStudent || "Geen leerling geselecteerd"}
+              {selectedStudent || (language === "en" ? "No student selected" : "Geen leerling geselecteerd")}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              {selectedStudent ? `Klas: ${selectedClass}` : "Selecteer een leerling"}
+              {selectedStudent
+                ? `${language === "en" ? "Class" : "Klas"}: ${selectedClass}`
+                : language === "en"
+                  ? "Select a student"
+                  : "Selecteer een leerling"}
             </div>
             {selectedStudent ? (
               <div className="flex items-center gap-2 mb-2">
-                <div className="text-sm font-medium dark:text-gray-200">Status:</div>
+                <div className="text-sm font-medium dark:text-gray-200">{t.status}:</div>
                 {isTrulyAtRisk && (
                   <div className="relative group">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
                     <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                      {atRiskReason} (onder individuele doelstelling van {individualGoal}%)
+                      {atRiskReason} (
+                      {language === "en"
+                        ? `below individual goal of ${individualGoal}%`
+                        : `onder individuele doelstelling van ${individualGoal}%`}
+                      )
                     </div>
                   </div>
                 )}
@@ -125,7 +183,9 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
                   <div className="relative group">
                     <Clock className="h-4 w-4 text-blue-500" />
                     <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                      Aanwezigheid ({attendanceData.present}%) is onder de grenswaarde ({attendanceThreshold}%)
+                      {language === "en"
+                        ? `Attendance (${attendanceData.present}%) is below threshold (${attendanceThreshold}%)`
+                        : `Aanwezigheid (${attendanceData.present}%) is onder de grenswaarde (${attendanceThreshold}%)`}
                     </div>
                   </div>
                 )}
@@ -145,63 +205,102 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
                     }`}
                   >
                     {!isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
-                      ? "Binnen doelstelling"
-                      : "Evaluatie nodig"}
+                      ? t.withinTarget
+                      : t.evaluationNeeded}
                   </span>
                   {/* Tooltip that appears on hover */}
                   <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                    <p className="mb-1">Status berekening:</p>
+                    <p className="mb-1">{language === "en" ? "Status calculation:" : "Status berekening:"}</p>
                     <ul className="list-disc pl-4 space-y-0.5">
                       <li>
-                        Competenties: {formattedPercentage}% {percentage >= individualGoal ? "✓" : "✗"} (doel:{" "}
+                        {language === "en" ? "Competencies" : "Competenties"}: {formattedPercentage}%{" "}
+                        {percentage >= individualGoal ? "✓" : "✗"} ({language === "en" ? "goal" : "doel"}:{" "}
                         {individualGoal}%)
                       </li>
                       <li>
-                        Aanwezigheid: {attendanceData.present}%{" "}
-                        {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} (doel: {attendanceThreshold}%)
+                        {language === "en" ? "Attendance" : "Aanwezigheid"}: {attendanceData.present}%{" "}
+                        {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} (
+                        {language === "en" ? "goal" : "doel"}: {attendanceThreshold}%)
                       </li>
-                      <li>Persoonlijk gemiddelde: {isAboveAverage ? "✓" : "✗"}</li>
+                      <li>
+                        {language === "en" ? "Personal average" : "Persoonlijk gemiddelde"}:{" "}
+                        {isAboveAverage ? "✓" : "✗"}
+                      </li>
                     </ul>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                Gebruik het zoekveld bovenaan om een leerling te selecteren
+                {language === "en"
+                  ? "Use the search field above to select a student"
+                  : "Gebruik het zoekveld bovenaan om een leerling te selecteren"}
               </div>
             )}
           </div>
         </div>
       </Card>
 
-      {/* Semester Averages Section */}
+      {/* Semester Competencies Section */}
       {selectedStudent && (
         <div className="mt-2 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2">
-          <div className="text-xs font-medium mb-1 dark:text-gray-200">Gemiddeldes per semester</div>
+          <div className="text-sm font-medium mb-1 dark:text-gray-200 text-center">{t.competenciesPerSemester}</div>
           <div className="flex items-center justify-between gap-2">
-            {[1, 2, 3].map((semester) => {
-              // Calculate average for this semester
-              const semesterData = getStudentSemesterData(selectedStudent, semester as 1 | 2 | 3)
-              const avgScore =
-                semesterData.length > 0
-                  ? semesterData.reduce((sum, item) => sum + item.result.score.raw, 0) / semesterData.length
-                  : 0
+            {semesterCompetencies.map((semData, index) => {
+              // Calculate cumulative achievements
+              const previousSemesters = semesterCompetencies.slice(0, index)
+              const previousAchieved = previousSemesters.reduce((sum, sem) => sum + sem.achieved, 0)
+              const cumulativeAchieved = previousAchieved + semData.achieved
 
-              // Determine color based on score
-              const getColor = (score: number) => {
-                if (score < 50) return "bg-red-500"
-                if (score < 70) return "bg-amber-500"
-                return "bg-green-500"
-              }
+              // Use the same scale for all semesters
+              const totalScale = total // Use the total from getTotalCompetencies
+              const cumulativePercentage = (cumulativeAchieved / totalScale) * 100
+              const currentSemesterPercentage = (semData.achieved / totalScale) * 100
+
+              // Define colors for each semester with the specified hex values
+              const semesterColors = ["#5b5760", "#a39cac", "#2a282c"]
 
               return (
-                <div key={semester} className="flex-1">
+                <div key={semData.semester} className="flex-1">
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className="dark:text-gray-300">S{semester}</span>
-                    <span className="dark:text-gray-300">{avgScore.toFixed(1)}%</span>
+                    <span className="dark:text-gray-300">
+                      {t.semester}
+                      {semData.semester}
+                    </span>
+                    <span className="dark:text-gray-300">
+                      {cumulativeAchieved}/{totalScale}
+                    </span>
                   </div>
-                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className={`h-full ${getColor(avgScore)}`} style={{ width: `${avgScore}%` }} />
+                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                    {/* Show previous semesters' contributions */}
+                    {previousSemesters.map((prevSem, prevIndex) => {
+                      const prevPercentage = (prevSem.achieved / totalScale) * 100
+                      const prevOffset = previousSemesters
+                        .slice(0, prevIndex)
+                        .reduce((sum, s) => sum + (s.achieved / totalScale) * 100, 0)
+
+                      return (
+                        <div
+                          key={`prev-${prevSem.semester}`}
+                          className="absolute h-full"
+                          style={{
+                            width: `${prevPercentage}%`,
+                            left: `${prevOffset}%`,
+                            backgroundColor: semesterColors[prevIndex],
+                          }}
+                        />
+                      )
+                    })}
+
+                    {/* Show current semester's contribution */}
+                    <div
+                      className="absolute h-full"
+                      style={{
+                        width: `${currentSemesterPercentage}%`,
+                        left: `${cumulativePercentage - currentSemesterPercentage}%`,
+                        backgroundColor: semesterColors[index],
+                      }}
+                    />
                   </div>
                 </div>
               )

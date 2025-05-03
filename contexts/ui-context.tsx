@@ -13,6 +13,8 @@ interface UIContextType {
   toggleShowCharts: () => void
   showWarnings: boolean
   toggleShowWarnings: () => void
+  language: "nl" | "en"
+  setLanguage: (lang: "nl" | "en") => void
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined)
@@ -24,6 +26,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [compactView, setCompactView] = useState(false)
   const [showCharts, setShowCharts] = useState(true)
   const [showWarnings, setShowWarnings] = useState(true)
+  const [language, setLanguage] = useState<"nl" | "en">("nl") // Default to Dutch
 
   // Initialize dark mode from localStorage or system preference
   useEffect(() => {
@@ -57,6 +60,12 @@ export function UIProvider({ children }: { children: ReactNode }) {
       if (storedShowWarnings !== null) {
         setShowWarnings(storedShowWarnings === "true")
       }
+
+      // Initialize language from localStorage
+      const storedLanguage = localStorage.getItem("language")
+      if (storedLanguage === "en" || storedLanguage === "nl") {
+        setLanguage(storedLanguage)
+      }
     }
   }, [])
 
@@ -80,8 +89,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("compactView", compactView.toString())
       localStorage.setItem("showCharts", showCharts.toString())
       localStorage.setItem("showWarnings", showWarnings.toString())
+      localStorage.setItem("language", language)
     }
-  }, [hideNonCompleted, compactView, showCharts, showWarnings])
+  }, [hideNonCompleted, compactView, showCharts, showWarnings, language])
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode)
@@ -116,6 +126,8 @@ export function UIProvider({ children }: { children: ReactNode }) {
         toggleShowCharts,
         showWarnings,
         toggleShowWarnings,
+        language,
+        setLanguage,
       }}
     >
       {children}

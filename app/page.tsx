@@ -9,7 +9,6 @@ import { SemesterScatterPlot } from "@/components/semester-scatter-plot"
 import { useStudent } from "@/contexts/student-context"
 import { useMemo, useState, useRef, useEffect } from "react"
 import {
-  getClassScoresForSemester,
   getStudentData,
   isStudentAtRisk,
   getAtRiskReason,
@@ -26,6 +25,8 @@ import { SettingsMenu } from "@/components/settings-menu"
 import Image from "next/image"
 import { Progress } from "@/components/ui/progress"
 import { InfoPopup } from "@/components/info-popup"
+// Add the import for the API service at the top of the file
+import { api } from "@/services/api"
 
 export default function Dashboard() {
   return (
@@ -35,11 +36,12 @@ export default function Dashboard() {
   )
 }
 
+// Add translations object inside the DashboardContent component
 function DashboardContent() {
   const { selectedStudent, selectedClass } = useStudent()
-  const [showNotes, setShowNotes] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
-  const { compactView, darkMode } = useUI()
+  const [showNotes, setShowProfile] = useState(false)
+  const [showProfile, setShowNotes] = useState(false)
+  const { compactView, darkMode, language } = useUI()
   const [activeSemester, setActiveSemester] = useState<string>("semester1")
   const profileRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
@@ -59,6 +61,115 @@ function DashboardContent() {
   // Get the competency percentage
   const { achieved, total } = getTotalCompetencies(selectedStudent)
   const percentage = (achieved / total) * 100
+
+  // Add translations
+  const translations = {
+    en: {
+      noStudentSelected: "No student selected",
+      selectStudent: "Select a student using the search field above to view semester data.",
+      positioning: "Positioning relative to fellow students",
+      positioningFrom: "Positioning relative to fellow students from",
+      eachDot: "Each dot represents a student.",
+      coloredDot: "The colored dot is",
+      semester: "Semester",
+      clickTab: "Click on the tab above to view this semester",
+      profile: "Profile of",
+      notes: "Notes for",
+      noNotes: "No notes found for this student.",
+      withinTarget: "Within target",
+      attendance: "Attendance",
+      meetsThreshold: "meets the threshold",
+      goodAttendance: "The student has good attendance and meets the minimum requirements.",
+      authorized: "Authorized",
+      unauthorized: "Unauthorized",
+      attentionPoints: "Attention points",
+      attendanceBelow: "Attendance is below the threshold",
+      studentMustAttend: "The student needs better attendance to meet the minimum requirements.",
+      criticalAttendance: "The student has critically low attendance that requires urgent attention.",
+      competencyIssues: "Competency issues:",
+      needsGuidance: "This student needs extra guidance.",
+      status: "Status",
+      passed: "Passed",
+      evaluationNeeded: "Evaluation needed",
+      statusCalculation: "Status calculation:",
+      competencies: "Competencies",
+      goal: "goal",
+      personalAverage: "Personal average",
+      passedStatus:
+        'The "Passed" status is awarded when the student meets all criteria: competency goal, attendance threshold, and personal average.',
+      individualGoalExplanation:
+        'The individual goal is tailored to the student\'s capabilities and progress. Students are considered "at risk" when they perform below their personal goal.',
+      mainSubjects: "Main subjects",
+      enrolledSince: "Enrolled since",
+      schoolYears: "School years",
+      grade: "Grade",
+      year: "year",
+      attendanceThreshold: "Attendance:",
+      save: "Save",
+      saving: "Saving...",
+      enterValidValue: "Enter a valid value between 50 and 100",
+      thresholdSaved: "Attendance threshold saved!",
+      errorSaving: "An error occurred while saving",
+      minimumAttendance: "Minimum attendance percentage for students",
+      individualGoal: "Individual goal:",
+      personalGoal: "Personal goal for this student",
+      schoolYear: "School year",
+    },
+    nl: {
+      noStudentSelected: "Geen leerling geselecteerd",
+      selectStudent: "Selecteer een leerling via het zoekveld bovenaan om de semestergegevens te bekijken.",
+      positioning: "Positionering ten opzichte van medestudenten",
+      positioningFrom: "Positionering ten opzichte van medestudenten uit",
+      eachDot: "Elke stip vertegenwoordigt een student.",
+      coloredDot: "De gekleurde stip is",
+      semester: "Semester",
+      clickTab: "Klik op de tab hierboven om dit semester te bekijken",
+      profile: "Profiel van",
+      notes: "Notities voor",
+      noNotes: "Geen notities gevonden voor deze leerling.",
+      withinTarget: "Binnen doelstelling",
+      attendance: "Aanwezigheid",
+      meetsThreshold: "voldoet aan de grenswaarde",
+      goodAttendance: "De leerling heeft een goede aanwezigheidsgraad en voldoet aan de minimumvereisten.",
+      authorized: "Gewettigd",
+      unauthorized: "Ongewettigd",
+      attentionPoints: "Aandachtspunten",
+      attendanceBelow: "Aanwezigheid is onder de grenswaarde",
+      studentMustAttend: "De leerling moet beter aanwezig zijn om aan de minimumvereisten te voldoen.",
+      criticalAttendance: "De leerling heeft een kritisch lage aanwezigheid die dringend aandacht vereist.",
+      competencyIssues: "Competentie-issues:",
+      needsGuidance: "Deze leerling heeft extra begeleiding nodig.",
+      status: "Status",
+      passed: "Geslaagd",
+      evaluationNeeded: "Evaluatie nodig",
+      statusCalculation: "Status berekening:",
+      competencies: "Competenties",
+      goal: "doel",
+      personalAverage: "Persoonlijk gemiddelde",
+      passedStatus:
+        'De status "Geslaagd" wordt toegekend wanneer de leerling voldoet aan alle criteria: competentiedoelstelling, aanwezigheidsgrenswaarde en persoonlijk gemiddelde.',
+      individualGoalExplanation:
+        'De individuele doelstelling is afgestemd op de capaciteiten en vooruitgang van de leerling. Leerlingen worden als "at risk" beschouwd wanneer ze onder hun persoonlijke doelstelling presteren.',
+      mainSubjects: "Hoofdvakken",
+      enrolledSince: "Ingeschreven sinds",
+      schoolJaren: "Schooljaren",
+      grade: "Graad",
+      year: "jaar",
+      attendanceThreshold: "Aanwezigheid:",
+      save: "Opslaan",
+      saving: "Opslaan...",
+      enterValidValue: "Voer een geldige waarde in tussen 50 en 100",
+      thresholdSaved: "Aanwezigheid grenswaarde opgeslagen!",
+      errorSaving: "Er is een fout opgetreden bij het opslaan",
+      minimumAttendance: "Minimale percentage aanwezigheid voor de leerlingen",
+      individualGoal: "Individuele doelstelling:",
+      personalGoal: "Persoonlijke doelstelling voor deze leerling",
+      schoolYear: "Schooljaar",
+    },
+  }
+
+  // Get translations based on current language
+  const t = translations[language]
 
   // Near the beginning of the DashboardContent component, add this check
   useEffect(() => {
@@ -119,18 +230,37 @@ function DashboardContent() {
     setIndividualGoal(getStudentIndividualGoal(selectedStudent))
   }, [selectedStudent])
 
-  // Get data for each semester's scatter plot
-  const semesterScores = useMemo(() => {
-    return [1, 2, 3].map((semester) => {
-      const classScores = getClassScoresForSemester(selectedClass, semester as 1 | 2 | 3)
+  // Replace the semesterScores useMemo with API calls
+  const [semester1Data, setSemester1Data] = useState([])
+  const [semester2Data, setSemester2Data] = useState([])
+  const [semester3Data, setSemester3Data] = useState([])
 
-      // Mark the current student
-      return classScores.map((student) => ({
-        ...student,
-        isCurrentStudent: student.name === selectedStudent,
-      }))
-    })
+  useEffect(() => {
+    if (selectedStudent && selectedClass) {
+      // Fetch data for all three semesters
+      const fetchSemesterData = async () => {
+        try {
+          const [sem1, sem2, sem3] = await Promise.all([
+            api.getSemesterScores(selectedClass, 1, selectedStudent),
+            api.getSemesterScores(selectedClass, 2, selectedStudent),
+            api.getSemesterScores(selectedClass, 3, selectedStudent),
+          ])
+
+          setSemester1Data(sem1.scores)
+          setSemester2Data(sem2.scores)
+          setSemester3Data(sem3.scores)
+        } catch (error) {
+          console.error("Error fetching semester scores:", error)
+        }
+      }
+
+      fetchSemesterData()
+    }
   }, [selectedStudent, selectedClass])
+
+  const semesterScores = useMemo(() => {
+    return [semester1Data, semester2Data, semester3Data]
+  }, [semester1Data, semester2Data, semester3Data])
 
   // Get student's subject data
   const studentData = useMemo(() => {
@@ -254,8 +384,10 @@ function DashboardContent() {
   // Haal de competentie-issues op
   const competencyIssues = getStudentCompetencyIssues(selectedStudent)
 
-  // Render een semester met zijn vakken
+  // Render een semester with its subjects
   const renderSemester = (semesterNum: number, isActive: boolean) => {
+    // Each subject shown here belongs to this specific semester
+    // This relationship is defined in the database and cannot be changed
     const subjects = semesterSubjects[semesterNum]
 
     return (
@@ -263,22 +395,22 @@ function DashboardContent() {
         className={`border rounded-md flex-1 dark:bg-gray-800 dark:border-gray-700 relative p-3 ${
           !isActive ? "opacity-60 pointer-events-none select-none" : ""
         }`}
+        data-semester={semesterNum}
         style={{
-          height: "600px", // Changed from 750px to 600px to make it less tall
+          height: "calc(100vh - 300px)", // Responsive height based on viewport
+          maxHeight: "600px", // Maximum height
           overflow: "hidden", // Hide overflow for the container
         }}
       >
         {!isActive && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-100/30 dark:bg-gray-900/30">
             <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-md text-center">
-              <p className="text-gray-700 dark:text-gray-300 font-medium">
-                Klik op de tab hierboven om dit semester te bekijken
-              </p>
+              <p className="text-gray-700 dark:text-gray-300 font-medium">{t.clickTab}</p>
             </div>
           </div>
         )}
         <div
-          className={`grid grid-cols-1 ${isActive ? "md:grid-cols-2" : ""} gap-3 custom-scrollbar`}
+          className={`grid grid-cols-1 md:grid-cols-2 gap-3 custom-scrollbar`}
           style={{
             height: "100%",
             overflowY: "auto", // Enable vertical scrolling
@@ -306,8 +438,74 @@ function DashboardContent() {
     )
   }
 
+  // Replace the handleSaveAttendanceThreshold function with API call
+  const handleSaveAttendanceThreshold = async () => {
+    if (!thresholdInputRef.current) return
+
+    const newThreshold = Number.parseInt(thresholdInputRef.current.value)
+    if (isNaN(newThreshold) || newThreshold < 50 || newThreshold > 100) {
+      alert(t.enterValidValue)
+      return
+    }
+
+    setIsSaving(true)
+
+    try {
+      // Use the API service to update the attendance threshold
+      const result = await api.updateAttendanceThreshold(selectedStudent, newThreshold)
+
+      if (result.success) {
+        // Update local state after successful save
+        setAttendanceThreshold(newThreshold)
+
+        // Show success message
+        alert(t.thresholdSaved)
+      } else {
+        throw new Error("Failed to save threshold")
+      }
+    } catch (error) {
+      console.error("Error saving threshold:", error)
+      alert(t.errorSaving)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Replace the handleSaveIndividualGoal function with API call
+  const handleSaveIndividualGoal = async () => {
+    if (!goalInputRef.current) return
+
+    const newGoal = Number.parseInt(goalInputRef.current.value)
+    if (isNaN(newGoal) || newGoal < 50 || newGoal > 100) {
+      alert(t.enterValidValue)
+      return
+    }
+
+    setIsSavingGoal(true)
+
+    try {
+      // Use the API service to update the individual goal
+      const result = await api.updateIndividualGoal(selectedStudent, newGoal)
+
+      if (result.success) {
+        // Update local state after successful save
+        setIndividualGoal(newGoal)
+
+        // Show success message
+        alert(t.personalGoal + "!")
+      } else {
+        throw new Error("Failed to save goal")
+      }
+    } catch (error) {
+      console.error("Error saving goal:", error)
+      alert(t.errorSaving)
+    } finally {
+      setIsSavingGoal(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2 px-4 flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
           <StudentSelector />
@@ -331,7 +529,7 @@ function DashboardContent() {
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Profiel van {selectedStudent}
+                      {t.profile} {selectedStudent}
                     </h2>
                     <button
                       className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
@@ -367,14 +565,18 @@ function DashboardContent() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{selectedClass}</p>
                         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-1">
                           <Calendar className="h-4 w-4" />
-                          <span>Schooljaar 2023-2024</span>
+                          <span>{t.schoolYear} 2023-2024</span>
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           <p>
-                            Graad {enrollmentInfo.grade} | {enrollmentInfo.currentGrade}e jaar
+                            {t.grade} {enrollmentInfo.grade} | {enrollmentInfo.currentGrade}e {t.year}
                           </p>
-                          <p className="text-xs mt-1">Ingeschreven sinds {enrollmentInfo.years[0]}</p>
-                          <p className="text-xs mt-1">Schooljaren: {enrollmentInfo.years.join(", ")}</p>
+                          <p className="text-xs mt-1">
+                            {t.enrolledSince} {enrollmentInfo.years[0]}
+                          </p>
+                          <p className="text-xs mt-1">
+                            {t.schoolYears}: {enrollmentInfo.years.join(", ")}
+                          </p>
                         </div>
 
                         {/* Aanwezigheid grenswaarde instelling */}
@@ -384,7 +586,7 @@ function DashboardContent() {
                               htmlFor="attendance-threshold"
                               className="text-xs font-medium text-gray-700 dark:text-gray-300"
                             >
-                              Aanwezigheid:
+                              {t.attendanceThreshold}
                             </label>
                             <div className="flex items-center gap-2">
                               <div className="flex items-center">
@@ -402,43 +604,7 @@ function DashboardContent() {
                               <button
                                 className={`px-2 py-1 text-xs ${isSaving ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"} text-white rounded flex items-center gap-1`}
                                 disabled={isSaving}
-                                onClick={async () => {
-                                  if (!thresholdInputRef.current) return
-
-                                  const newThreshold = Number.parseInt(thresholdInputRef.current.value)
-                                  if (isNaN(newThreshold) || newThreshold < 50 || newThreshold > 100) {
-                                    alert("Voer een geldige waarde in tussen 50 en 100")
-                                    return
-                                  }
-
-                                  setIsSaving(true)
-
-                                  try {
-                                    // In a real implementation, this would be an API call
-                                    // await fetch('/api/students/attendance-threshold', {
-                                    //   method: 'POST',
-                                    //   headers: { 'Content-Type': 'application/json' },
-                                    //   body: JSON.stringify({
-                                    //     studentId: selectedStudent,
-                                    //     threshold: newThreshold
-                                    //   })
-                                    // });
-
-                                    // Simulate API call
-                                    await new Promise((resolve) => setTimeout(resolve, 500))
-
-                                    // Update local state after successful save
-                                    setAttendanceThreshold(newThreshold)
-
-                                    // Show success message
-                                    alert("Aanwezigheid grenswaarde opgeslagen!")
-                                  } catch (error) {
-                                    console.error("Error saving threshold:", error)
-                                    alert("Er is een fout opgetreden bij het opslaan")
-                                  } finally {
-                                    setIsSaving(false)
-                                  }
-                                }}
+                                onClick={handleSaveAttendanceThreshold}
                               >
                                 {isSaving ? (
                                   <>
@@ -462,17 +628,15 @@ function DashboardContent() {
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                       ></path>
                                     </svg>
-                                    Opslaan...
+                                    {t.saving}
                                   </>
                                 ) : (
-                                  "Opslaan"
+                                  t.save
                                 )}
                               </button>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Minimale percentage aanwezigheid voor de leerlingen
-                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.minimumAttendance}</p>
                         </div>
 
                         {/* Individuele doelstelling instelling */}
@@ -482,7 +646,7 @@ function DashboardContent() {
                               htmlFor="individual-goal"
                               className="text-xs font-medium text-gray-700 dark:text-gray-300"
                             >
-                              Individuele doelstelling:
+                              {t.individualGoal}:
                             </label>
                             <div className="flex items-center gap-2">
                               <div className="flex items-center">
@@ -500,43 +664,7 @@ function DashboardContent() {
                               <button
                                 className={`px-2 py-1 text-xs ${isSavingGoal ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"} text-white rounded flex items-center gap-1`}
                                 disabled={isSavingGoal}
-                                onClick={async () => {
-                                  if (!goalInputRef.current) return
-
-                                  const newGoal = Number.parseInt(goalInputRef.current.value)
-                                  if (isNaN(newGoal) || newGoal < 50 || newGoal > 100) {
-                                    alert("Voer een geldige waarde in tussen 50 en 100")
-                                    return
-                                  }
-
-                                  setIsSavingGoal(true)
-
-                                  try {
-                                    // In a real implementation, this would be an API call
-                                    // await fetch('/api/students/individual-goal', {
-                                    //   method: 'POST',
-                                    //   headers: { 'Content-Type': 'application/json' },
-                                    //   body: JSON.stringify({
-                                    //     studentId: selectedStudent,
-                                    //     goal: newGoal
-                                    //   })
-                                    // });
-
-                                    // Simulate API call
-                                    await new Promise((resolve) => setTimeout(resolve, 500))
-
-                                    // Update local state after successful save
-                                    setIndividualGoal(newGoal)
-
-                                    // Show success message
-                                    alert("Individuele doelstelling opgeslagen!")
-                                  } catch (error) {
-                                    console.error("Error saving goal:", error)
-                                    alert("Er is een fout opgetreden bij het opslaan")
-                                  } finally {
-                                    setIsSavingGoal(false)
-                                  }
-                                }}
+                                onClick={handleSaveIndividualGoal}
                               >
                                 {isSavingGoal ? (
                                   <>
@@ -560,17 +688,15 @@ function DashboardContent() {
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                       ></path>
                                     </svg>
-                                    Opslaan...
+                                    {t.saving}
                                   </>
                                 ) : (
-                                  "Opslaan"
+                                  t.save
                                 )}
                               </button>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Persoonlijke doelstelling voor deze leerling
-                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.personalGoal}</p>
                         </div>
                       </div>
                     </div>
@@ -578,11 +704,11 @@ function DashboardContent() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Attendance section */}
                       <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">Aanwezigheid</h3>
+                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">{t.attendance}</h3>
                         <div className="space-y-2">
                           <div>
                             <div className="flex justify-between text-xs mb-1">
-                              <span className="dark:text-gray-300">Aanwezig</span>
+                              <span className="dark:text-gray-300">{t.attendance}</span>
                               <span className="dark:text-gray-300">{attendanceData.present}%</span>
                             </div>
                             <Progress value={attendanceData.present} className="h-2 bg-gray-200 dark:bg-gray-600" />
@@ -597,11 +723,15 @@ function DashboardContent() {
                           <div className="flex gap-4 mt-2">
                             <div className="flex items-center gap-1 text-xs">
                               <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              <span className="dark:text-gray-300">Gewettigd: {attendanceData.authorized}%</span>
+                              <span className="dark:text-gray-300">
+                                {t.authorized}: {attendanceData.authorized}%
+                              </span>
                             </div>
                             <div className="flex items-center gap-1 text-xs">
                               <XCircle className="h-3 w-3 text-red-500" />
-                              <span className="dark:text-gray-300">Ongewettigd: {attendanceData.unauthorized}%</span>
+                              <span className="dark:text-gray-300">
+                                {t.unauthorized}: {attendanceData.unauthorized}%
+                              </span>
                             </div>
                           </div>
                           {/* Add status message based on threshold */}
@@ -615,17 +745,17 @@ function DashboardContent() {
                             }`}
                           >
                             {attendanceData.present >= attendanceThreshold
-                              ? "Aanwezigheid voldoet aan de grenswaarde"
+                              ? `${t.attendance} ${t.meetsThreshold}`
                               : attendanceData.present >= attendanceThreshold - 10
-                                ? "Aanwezigheid onder de grenswaarde"
-                                : `Aanwezigheid kritisch onder de grenswaarde (${attendanceThreshold}%)`}
+                                ? `${t.attendance} ${t.attendanceBelow}`
+                                : `${t.criticalAttendance} (${attendanceThreshold}%)`}
                           </div>
                         </div>
                       </div>
 
                       {/* Main subjects section */}
                       <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">Hoofdvakken</h3>
+                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">{t.mainSubjects}</h3>
                         <div className="space-y-2">
                           {mainSubjects.map((subject) => (
                             <div key={subject.subject}>
@@ -686,7 +816,7 @@ function DashboardContent() {
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Notities voor {selectedStudent}
+                      {t.notes} {selectedStudent}
                     </h2>
                     <button
                       className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
@@ -697,9 +827,7 @@ function DashboardContent() {
                   </div>
 
                   <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md border border-gray-200 dark:border-gray-600">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                      Geen notities gevonden voor deze leerling.
-                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">{t.noNotes}</p>
                   </div>
 
                   {/* Positive section - show when attendance is above threshold */}
@@ -707,23 +835,25 @@ function DashboardContent() {
                     <div className="mt-4">
                       <h3 className="text-md font-medium text-green-600 dark:text-green-500 flex items-center gap-2 mb-2">
                         <CheckCircle2 className="h-4 w-4" />
-                        Binnen doelstelling
+                        {t.withinTarget}
                       </h3>
                       <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md border border-green-200 dark:border-green-800">
                         <p className="text-sm text-green-800 dark:text-green-400 font-medium">
-                          Aanwezigheid ({attendanceData.present}%) voldoet aan de grenswaarde ({attendanceThreshold}%)
+                          {t.attendance} ({attendanceData.present}%) {t.meetsThreshold} ({attendanceThreshold}%)
                         </p>
-                        <p className="text-xs text-green-700 dark:text-green-400 mt-1">
-                          De leerling heeft een goede aanwezigheidsgraad en voldoet aan de minimumvereisten.
-                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-400 mt-1">{t.goodAttendance}.</p>
                         <div className="flex gap-4 mt-2">
                           <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
                             <CheckCircle2 className="h-3 w-3" />
-                            <span>Gewettigd: {attendanceData.authorized}%</span>
+                            <span>
+                              {t.authorized}: {attendanceData.authorized}%
+                            </span>
                           </div>
                           <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
                             <XCircle className="h-3 w-3" />
-                            <span>Ongewettigd: {attendanceData.unauthorized}%</span>
+                            <span>
+                              {t.unauthorized}: {attendanceData.unauthorized}%
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -736,7 +866,7 @@ function DashboardContent() {
                     <div className="mt-4">
                       <h3 className="text-md font-medium text-amber-600 dark:text-amber-500 flex items-center gap-2 mb-2">
                         <AlertTriangle className="h-4 w-4" />
-                        Aandachtspunten
+                        {t.attentionPoints}
                       </h3>
                       <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
                         {isStudentAtRisk(selectedStudent) && percentage < individualGoal && (
@@ -751,15 +881,15 @@ function DashboardContent() {
                             className={isStudentAtRisk(selectedStudent) && percentage < individualGoal ? "mt-3" : ""}
                           >
                             <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
-                              Aanwezigheid ({attendanceData.present}%) is onder de grenswaarde ({attendanceThreshold}%)
+                              {t.attendance} ({attendanceData.present}%) {t.attendanceBelow} ({attendanceThreshold}%)
                             </p>
                             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                               {attendanceData.present >= attendanceThreshold - 10
-                                ? "De leerling moet beter aanwezig zijn om aan de minimumvereisten te voldoen."
-                                : "De leerling heeft een kritisch lage aanwezigheid die dringend aandacht vereist."}
+                                ? t.studentMustAttend
+                                : t.criticalAttendance}
                             </p>
                             <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                              Ongewettigde afwezigheid: {attendanceData.unauthorized}%
+                              {t.unauthorized}: {attendanceData.unauthorized}%
                             </p>
                           </div>
                         )}
@@ -767,7 +897,7 @@ function DashboardContent() {
                         {competencyIssues.length > 0 && percentage < individualGoal && (
                           <div className="mt-3">
                             <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-1">
-                              Competentie-issues:
+                              {t.competencyIssues}:
                             </p>
                             <ul className="list-disc pl-5 text-xs text-amber-600 dark:text-amber-500 space-y-1">
                               {competencyIssues.map((issue, index) => (
@@ -777,9 +907,7 @@ function DashboardContent() {
                           </div>
                         )}
 
-                        <p className="text-xs text-amber-600 dark:text-amber-500 mt-3">
-                          Deze leerling heeft extra begeleiding nodig.
-                        </p>
+                        <p className="text-xs text-amber-600 dark:text-amber-500 mt-3">{t.needsGuidance}</p>
                       </div>
                     </div>
                   )}
@@ -787,38 +915,34 @@ function DashboardContent() {
                   <div className="mt-4">
                     <h3 className="text-md font-medium text-blue-600 dark:text-blue-500 flex items-center gap-2 mb-2">
                       <FileText className="h-4 w-4" />
-                      Status
+                      {t.status}
                     </h3>
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                       <p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
                         {isAboveAverage && percentage >= individualGoal && attendanceData.present >= attendanceThreshold
-                          ? "Geslaagd"
-                          : "Evaluatie nodig"}
+                          ? t.passed
+                          : t.evaluationNeeded}
                       </p>
                       <div className="mt-2">
                         <h4 className="text-xs font-medium mb-1 text-blue-700 dark:text-blue-400">
-                          Status berekening:
+                          {t.statusCalculation}:
                         </h4>
                         <ul className="list-disc pl-4 space-y-1 text-xs text-blue-700 dark:text-blue-400">
                           <li>
-                            Competenties: {percentage.toFixed(2)}% {percentage >= individualGoal ? "✓" : "✗"} (doel:{" "}
-                            {individualGoal}%)
+                            {t.competencies}: {percentage.toFixed(2)}% {percentage >= individualGoal ? "✓" : "✗"} (
+                            {t.goal}: {individualGoal}%)
                           </li>
                           <li>
-                            Aanwezigheid: {attendanceData.present}%{" "}
-                            {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} (doel: {attendanceThreshold}%)
+                            {t.attendance}: {attendanceData.present}%{" "}
+                            {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} ({t.goal}: {attendanceThreshold}
+                            %)
                           </li>
-                          <li>Persoonlijk gemiddelde: {isAboveAverage ? "✓" : "✗"}</li>
+                          <li>
+                            {t.personalAverage}: {isAboveAverage ? "✓" : "✗"}
+                          </li>
                         </ul>
-                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">
-                          De status "Geslaagd" wordt toegekend wanneer de leerling voldoet aan alle criteria:
-                          competentiedoelstelling, aanwezigheidsgrenswaarde en persoonlijk gemiddelde.
-                        </p>
-                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">
-                          De individuele doelstelling ({individualGoal}%) is afgestemd op de capaciteiten en vooruitgang
-                          van de leerling. Leerlingen worden als "at risk" beschouwd wanneer ze onder hun persoonlijke
-                          doelstelling presteren.
-                        </p>
+                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.passedStatus}</p>
+                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.individualGoalExplanation}</p>
                       </div>
                     </div>
                   </div>
@@ -834,15 +958,13 @@ function DashboardContent() {
         </div>
       </header>
 
-      <main className={`w-full px-4 py-2 ${compactView ? "max-w-screen-2xl mx-auto" : ""}`}>
+      <main className={`w-full px-4 py-2 flex-1 overflow-auto ${compactView ? "max-w-screen-2xl mx-auto" : ""}`}>
         {selectedStudent ? (
           <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
-            Positionering ten opzichte van medestudenten uit {selectedClass}
+            {t.positioningFrom} {selectedClass}
           </h1>
         ) : (
-          <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
-            Positionering ten opzichte van medestudenten
-          </h1>
+          <h1 className="text-xl font-medium text-center mb-4 dark:text-white">{t.positioning}</h1>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -858,7 +980,7 @@ function DashboardContent() {
               <SemesterScatterPlot title="Semester 3" data={semesterScores[2]} />
             </div>
             <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Elke stip vertegenwoordigt een student. {selectedStudent && `De donkere stip is ${selectedStudent}.`}
+              {t.eachDot} {selectedStudent && `${t.coloredDot} ${selectedStudent}.`}
             </div>
           </div>
         </div>
@@ -875,7 +997,7 @@ function DashboardContent() {
                   // You can use this semesterNum value to pass to components that need it
                 }}
               >
-                Semester 1
+                {t.semester} 1
                 <ChevronDown className="ml-1 h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger
@@ -887,7 +1009,7 @@ function DashboardContent() {
                   // You can use this semesterNum value to pass to components that need it
                 }}
               >
-                Semester 2
+                {t.semester} 2
                 <ChevronDown className="ml-1 h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger
@@ -899,7 +1021,7 @@ function DashboardContent() {
                   // You can use this semesterNum value to pass to components that need it
                 }}
               >
-                Semester 3
+                {t.semester} 3
                 <ChevronDown className="ml-1 h-4 w-4" />
               </TabsTrigger>
             </TabsList>
@@ -924,11 +1046,9 @@ function DashboardContent() {
                   <div className="col-span-3 flex items-center justify-center bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-8">
                     <div className="text-center">
                       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                        Geen leerling geselecteerd
+                        {t.noStudentSelected}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
-                        Selecteer een leerling via het zoekveld bovenaan om de semestergegevens te bekijken.
-                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">{t.selectStudent}</p>
                     </div>
                   </div>
                 )}

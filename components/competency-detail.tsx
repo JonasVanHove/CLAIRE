@@ -1,23 +1,13 @@
-/**
- * CompetencyDetail Component
- *
- * In a production environment, this component would fetch data from a database:
- * - Subject competencies would be fetched based on the subject ID
- * - Activities would be fetched based on the competency ID
- * - All data would be stored in a relational database with proper relationships:
- *   - Subjects have many Competencies
- *   - Competencies have many Activities
- *   - Students have completed/evaluated Activities
- *   - Competencies are stored per student, allowing activities from different subjects to reference the same competency
- *
- * The current implementation uses mock data for demonstration purposes.
- */
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { X, FileText, PenTool, BookOpen, ChevronDown, ChevronRight, MessageSquare } from "lucide-react"
+import { X, FileText, PenTool, BookOpen, ChevronDown, ChevronRight } from "lucide-react"
 import type { Competency } from "@/data/student-data"
 import { SubjectActivitiesTab } from "./subject-activities-tab"
+import { useUI } from "@/contexts/ui-context"
+import { api } from "@/services/api"
+import { useStudent } from "@/contexts/student-context"
+import type { Activity } from "@/data/student-data"
 
 interface CompetencyDetailProps {
   subject: string
@@ -49,6 +39,32 @@ export function CompetencyDetail({
   const [hoveredBar, setHoveredBar] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<"competencies" | "activities">("competencies")
   const modalRef = useRef<HTMLDivElement>(null)
+  const { language } = useUI()
+
+  // Update the CompetencyDetail component to use the API service for activities
+  // Add this at the beginning of the component:
+  const { selectedStudent } = useStudent()
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false)
+
+  // Fetch activities when the component mounts
+  useEffect(() => {
+    const fetchActivities = async () => {
+      if (!selectedStudent) return
+
+      setIsLoadingActivities(true)
+      try {
+        const response = await api.getSubjectActivities(selectedStudent, subject)
+        setActivities(response.activities)
+      } catch (error) {
+        console.error("Error fetching activities:", error)
+      } finally {
+        setIsLoadingActivities(false)
+      }
+    }
+
+    fetchActivities()
+  }, [selectedStudent, subject])
 
   // Add this useEffect hook to handle clicks outside the modal
   useEffect(() => {
@@ -87,6 +103,15 @@ export function CompetencyDetail({
     return statusComparison
   })
 
+  // For each competency, sort its activities by performance (worst to best)
+  sortedCompetencies.forEach((competency) => {
+    competency.activities.sort((a, b) => {
+      const aPerformance = a.score / a.maxScore
+      const bPerformance = b.score / b.maxScore
+      return aPerformance - bPerformance // Sort from lowest to highest
+    })
+  })
+
   // Update the CompetencyDetail component to accurately display activity counts
   // Get all activities across all competencies, but filter to only include activities for this subject
   // and limit to a reasonable number (6-7 per subject)
@@ -109,27 +134,61 @@ export function CompetencyDetail({
     }
   }, [allActivities.length, activitiesCount])
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
+  // Update the getActivityIcon function to accept the entire activity object instead of just the type
+  const getActivityIcon = (activity: Activity) => {
+    // Determine the color based on the activity's score
+    let colorClass = "text-gray-500" // Default color
+
+    if (activity.evaluated) {
+      const scorePercentage = (activity.score / activity.maxScore) * 100
+      if (scorePercentage < 50) {
+        colorClass = "text-red-500"
+      } else if (scorePercentage < 70) {
+        colorClass = "text-amber-500"
+      } else {
+        colorClass = "text-green-500"
+      }
+    } else if (activity.completed) {
+      colorClass = "text-amber-400" // For completed but not evaluated
+    } else {
+      colorClass = "text-gray-400" // For not completed
+    }
+
+    // Return the appropriate icon with the determined color
+    switch (activity.type) {
       case "toets":
-        return <PenTool className="h-5 w-5 text-amber-500" />
+        return <PenTool className={`h-5 w-5 ${colorClass}`} />
       case "taak":
-        return <FileText className="h-5 w-5 text-green-500" />
+        return <FileText className={`h-5 w-5 ${colorClass}`} />
       case "examen":
-        return <BookOpen className="h-5 w-5 text-red-500" />
+        return <BookOpen className={`h-5 w-5 ${colorClass}`} />
       default:
-        return <FileText className="h-5 w-5 text-gray-500" />
+        return <FileText className={`h-5 w-5 ${colorClass}`} />
+    }
+  }
+
+  // Update the background color of the icon container to match the result
+  const getIconBackgroundColor = (activity: Activity) => {
+    if (!activity.evaluated) return "bg-gray-100 dark:bg-gray-700"
+
+    const scorePercentage = (activity.score / activity.maxScore) * 100
+    if (scorePercentage < 50) {
+      return "bg-red-100 dark:bg-red-900/20"
+    } else if (scorePercentage < 70) {
+      return "bg-amber-100 dark:bg-amber-900/20"
+    } else {
+      return "bg-green-100 dark:bg-green-900/20"
     }
   }
 
   const getActivityTypeLabel = (type: string) => {
     switch (type) {
       case "toets":
-        return "Toets"
+        return language === "en" ? "Test" : "Toets"
       case "taak":
-        return "Taak"
+        return language === "en" ? "Assignment" : "Taak"
       case "examen":
-        return "Examen"
+        return language === "en" ? "Exam" : "Examen"
       default:
         return type.charAt(0).toUpperCase() + type.slice(1)
     }
@@ -138,28 +197,31 @@ export function CompetencyDetail({
   const getRelativePerformanceText = (performance: string) => {
     switch (performance) {
       case "onder":
-        return "Onder persoonlijk gemiddelde"
+        return language === "en" ? "Below personal average" : "Onder persoonlijk gemiddelde"
       case "boven":
-        return "Boven persoonlijk gemiddelde"
+        return language === "en" ? "Above personal average" : "Boven persoonlijk gemiddelde"
       default:
-        return "Rond persoonlijk gemiddelde"
+        return language === "en" ? "Around personal average" : "Rond persoonlijk gemiddelde"
     }
   }
 
   const getPerformanceCategory = (score: number, maxScore: number) => {
     const percentage = (score / maxScore) * 100
-    if (percentage < 50) return "Onvoldoende"
-    if (percentage < 70) return "Goed"
-    return "Uitstekend"
+    if (percentage < 50) return language === "en" ? "Insufficient" : "Onvoldoende"
+    if (percentage < 70) return language === "en" ? "Good" : "Goed"
+    return language === "en" ? "Excellent" : "Uitstekend"
   }
 
   const getPerformanceColor = (category: string) => {
     switch (category) {
       case "Onvoldoende":
+      case "Insufficient":
         return "bg-red-500"
       case "Goed":
+      case "Good":
         return "bg-amber-500"
       case "Uitstekend":
+      case "Excellent":
         return "bg-green-500"
       default:
         return "bg-gray-500"
@@ -169,10 +231,13 @@ export function CompetencyDetail({
   const getPerformanceRange = (category: string) => {
     switch (category) {
       case "Onvoldoende":
+      case "Insufficient":
         return "2 - 7"
       case "Goed":
+      case "Good":
         return "10 - 13,5"
       case "Uitstekend":
+      case "Excellent":
         return "7 - 10"
       default:
         return ""
@@ -187,8 +252,73 @@ export function CompetencyDetail({
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString("nl-BE", { day: "2-digit", month: "2-digit", year: "numeric" })
+    return date.toLocaleDateString(language === "en" ? "en-US" : "nl-BE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
   }
+
+  // Translations
+  const translations = {
+    en: {
+      position: "Position relative to class group",
+      completed: "completed",
+      activities: "activities",
+      ofWhich: "of which",
+      exam: "exam",
+      exams: "exams",
+      inSemester: "in semester",
+      competencies: "Competencies",
+      activities: "Activities",
+      students: "students",
+      notAchieved: "Not achieved",
+      partiallyAchieved: "Partially achieved",
+      achieved: "Achieved",
+      noActivities: "No activities found for this competency.",
+      completedButNotEvaluated: "Completed but not yet evaluated",
+      notCompleted: "Not yet completed",
+      score: "Score",
+      class: "Class",
+      min: "Min",
+      avg: "Avg",
+      max: "Max",
+      hideNote: "Hide note",
+      showNote: "Show note",
+      linkedCompetencies: "Linked competencies",
+      noCompetenciesLinked: "No competencies linked to this activity.",
+    },
+    nl: {
+      position: "Positie ten opzichte van klasgroep",
+      completed: "voltooid",
+      activities: "activiteiten",
+      ofWhich: "waarvan",
+      exam: "examen",
+      exams: "examens",
+      inSemester: "in semester",
+      competencies: "Competenties",
+      activities: "Activiteiten",
+      students: "leerlingen",
+      notAchieved: "Niet behaald",
+      partiallyAchieved: "Gedeeltelijk behaald",
+      achieved: "Behaald",
+      noActivities: "Geen activiteiten gevonden voor deze competentie.",
+      completedButNotEvaluated: "Afgelegd maar nog niet geëvalueerd",
+      notCompleted: "Nog niet afgelegd",
+      score: "Score",
+      class: "Klas",
+      min: "Gem",
+      avg: "Gem",
+      max: "Max",
+      hideNote: "Verberg notitie",
+      showNote: "Toon notitie",
+      linkedCompetencies: "Gekoppelde competenties",
+      noCompetentiesLinked: "Geen competenties gekoppeld aan deze activiteit.",
+    },
+  }
+
+  // Get translations based on current language
+  const t = translations[language]
 
   return (
     <div
@@ -196,27 +326,45 @@ export function CompetencyDetail({
       className="bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden max-h-[90vh] flex flex-col w-full"
     >
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-green-100 dark:bg-green-900/20">
-        <h2 className="text-xl font-medium text-gray-900 dark:text-gray-100">{subject}</h2>
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-            {allActivities.length} {allActivities.length === 1 ? "activiteit" : "activiteiten"}
-            {examCount > 0 ? `, waarvan ${examCount} ${examCount === 1 ? "examen" : "examens"}` : ""}
-            {semester ? ` in semester ${semester}` : ""}
+      <div
+        className={`py-2 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 shadow-sm ${
+          (achievedCompetencies / totalCompetencies) * 100 < 50
+            ? "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/30"
+            : (achievedCompetencies / totalCompetencies) * 100 < 70
+              ? "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-900/30"
+              : "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/30"
+        }`}
+      >
+        <h2
+          className={`text-lg font-semibold px-2 py-0.5 rounded-md ${
+            (achievedCompetencies / totalCompetencies) * 100 < 50
+              ? "text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20"
+              : (achievedCompetencies / totalCompetencies) * 100 < 70
+                ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20"
+                : "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20"
+          }`}
+        >
+          {subject}
+        </h2>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+            {allActivities.length} {allActivities.length === 1 ? t.activities.slice(0, -1) : t.activities}
+            {examCount > 0 ? `, ${t.ofWhich} ${examCount} ${examCount === 1 ? t.exam : t.exams}` : ""}
+            {semester ? ` ${t.inSemester} ${semester}` : ""}
           </span>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors duration-150"
+            className="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors duration-150"
             aria-label="Sluiten"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* Distribution chart */}
       <div className="p-4 pb-0">
-        <p className="text-center text-sm text-gray-600 dark:text-gray-300 mb-2">Positie ten opzichte van klasgroep</p>
+        <p className="text-center text-sm text-gray-600 dark:text-gray-300 mb-2">{t.position}</p>
 
         <div className="relative mb-1">
           <div className="h-16 flex items-end gap-0.5">
@@ -235,11 +383,11 @@ export function CompetencyDetail({
                   style={{ height: `${heightPercentage}%` }}
                   onMouseEnter={() => setHoveredBar(index)}
                   onMouseLeave={() => setHoveredBar(null)}
-                  title={`${scoreRange}: ${value} leerlingen`}
+                  title={`${scoreRange}: ${value} ${t.students}`}
                 >
                   {hoveredBar === index && (
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-10">
-                      {scoreRange}: {value} leerlingen
+                      {scoreRange}: {value} {t.students}
                     </div>
                   )}
                 </div>
@@ -267,10 +415,11 @@ export function CompetencyDetail({
       {/* Completion percentage */}
       <div className="px-4 pt-2 pb-4 text-center">
         <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-          {Math.round((achievedCompetencies / totalCompetencies) * 100)}% voltooid
+          {Math.round((achievedCompetencies / totalCompetencies) * 100)}% {t.completed}
         </h3>
         <p className="text-base text-gray-700 dark:text-gray-300">
-          {achievedCompetencies} van de {totalCompetencies} competenties behaald
+          {achievedCompetencies} {language === "en" ? "of" : "van de"} {totalCompetencies}{" "}
+          {language === "en" ? "competencies achieved" : "competenties behaald"}
         </p>
       </div>
 
@@ -284,7 +433,7 @@ export function CompetencyDetail({
           }`}
           onClick={() => setActiveTab("competencies")}
         >
-          Competenties
+          {t.competencies}
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium ${
@@ -294,7 +443,7 @@ export function CompetencyDetail({
           }`}
           onClick={() => setActiveTab("activities")}
         >
-          Activiteiten (
+          {t.activities} (
           {Math.min(allActivities.filter((activity) => (semester ? activity.semester === semester : true)).length, 7)})
         </button>
       </div>
@@ -362,129 +511,132 @@ export function CompetencyDetail({
 
                         // Determine student count based on category
                         let studentCount = 0
-                        if (performanceCategory === "Onvoldoende") {
+                        if (performanceCategory === "Onvoldoende" || performanceCategory === "Insufficient") {
                           studentCount = activity.classDistribution.lowPerformers
-                        } else if (performanceCategory === "Goed") {
+                        } else if (performanceCategory === "Goed" || performanceCategory === "Good") {
                           studentCount = activity.classDistribution.mediumPerformers
                         } else {
                           studentCount = activity.classDistribution.highPerformers
                         }
 
+                        // Determine if the activity is inactive (not completed or not evaluated)
+                        const isInactive = !activity.completed || !activity.evaluated
+
                         return (
                           <div
                             key={activity.id}
-                            className="bg-gray-50 dark:bg-gray-750 rounded-md p-3 hover:shadow-md transition-shadow duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 relative"
+                            className={`rounded-md p-2 hover:shadow-sm transition-shadow duration-200 border relative mb-2 ${
+                              isInactive
+                                ? "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-75"
+                                : "bg-gray-50 dark:bg-gray-750 border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+                            }`}
                           >
-                            {/* Activity number badge - moved to left side */}
-                            <div className="absolute top-3 left-3 w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
+                            {/* Activity number badge - moved to left side and made smaller */}
+                            <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
                               {activityIndex + 1}
                             </div>
 
-                            <div className="flex items-start justify-between mb-2 pl-8">
-                              <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                  {getActivityIcon(activity.type)}
+                            <div className="flex items-start justify-between mb-1 pl-6">
+                              <div className="flex items-center gap-1">
+                                <div
+                                  className={`w-8 h-8 rounded-full ${getIconBackgroundColor(activity)} flex items-center justify-center`}
+                                >
+                                  {getActivityIcon(activity)}
                                 </div>
                                 <div>
                                   <div className="flex items-center">
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                    <span className="font-medium text-xs text-gray-700 dark:text-gray-300">
                                       {getActivityTypeLabel(activity.type)}
                                     </span>
                                   </div>
-                                  <span className="text-sm text-gray-600 dark:text-gray-400">{activity.title}</span>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Datum: {formatDate(activity.date)} | Semester {activity.semester}
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">{activity.title}</span>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {language === "en" ? "Date" : "Datum"}: {formatDate(activity.date)} |{" "}
+                                    {language === "en" ? "Semester" : "Semester"} {activity.semester}
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
                                 <div className="text-right">
-                                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Score</div>
+                                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300">{t.score}</div>
                                   <div
-                                    className={`text-lg font-bold ${
-                                      activity.score / activity.maxScore < 0.5
-                                        ? "text-red-500"
-                                        : activity.score / activity.maxScore < 0.7
-                                          ? "text-amber-500"
-                                          : "text-green-500"
+                                    className={`text-base font-bold ${
+                                      !activity.evaluated
+                                        ? "text-gray-500"
+                                        : activity.score / activity.maxScore < 0.5
+                                          ? "text-red-500"
+                                          : activity.score / activity.maxScore < 0.7
+                                            ? "text-amber-500"
+                                            : "text-green-500"
                                     }`}
                                   >
-                                    {activity.score}/{activity.maxScore}
+                                    {activity.evaluated ? `${activity.score}/${activity.maxScore}` : "-"}
                                   </div>
                                 </div>
 
-                                {/* Performance indicator - bar chart showing class distribution */}
-                                <div className="flex flex-col items-end ml-4">
-                                  <div className="flex items-end h-20 gap-1">
+                                {/* Performance indicator - simplified bar chart */}
+                                <div className="flex flex-col items-end ml-2">
+                                  <div className="flex items-end h-8 gap-1">
                                     {/* Low performers bar (red) */}
                                     <div className="flex flex-col items-center">
                                       <div
-                                        className="w-6 bg-red-500 rounded-t-sm"
+                                        className="w-4 bg-red-500 rounded-t-sm"
                                         style={{
-                                          height: `${Math.max(5, activity.classDistribution.lowPerformers)}px`,
-                                          opacity: performanceCategory === "Onvoldoende" ? 1 : 0.5,
+                                          height: `${Math.min(24, Math.max(5, activity.classDistribution.lowPerformers))}px`,
+                                          opacity:
+                                            performanceCategory === "Onvoldoende" ||
+                                            performanceCategory === "Insufficient"
+                                              ? 1
+                                              : 0.5,
                                         }}
                                       ></div>
-                                      {performanceCategory === "Onvoldoende" && (
-                                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-t-black border-l-transparent border-r-transparent mt-1"></div>
-                                      )}
+                                      {performanceCategory === "Onvoldoende" ||
+                                      performanceCategory === "Insufficient" ? (
+                                        <div className="w-0 h-0 border-l-3 border-r-3 border-t-3 border-t-black border-l-transparent border-r-transparent mt-0.5"></div>
+                                      ) : null}
                                     </div>
 
                                     {/* Medium performers bar (amber) */}
                                     <div className="flex flex-col items-center">
                                       <div
-                                        className="w-6 bg-amber-500 rounded-t-sm"
+                                        className="w-4 bg-amber-500 rounded-t-sm"
                                         style={{
-                                          height: `${Math.max(5, activity.classDistribution.mediumPerformers)}px`,
-                                          opacity: performanceCategory === "Goed" ? 1 : 0.5,
+                                          height: `${Math.min(24, Math.max(5, activity.classDistribution.mediumPerformers))}px`,
+                                          opacity:
+                                            performanceCategory === "Goed" || performanceCategory === "Good" ? 1 : 0.5,
                                         }}
                                       ></div>
-                                      {performanceCategory === "Goed" && (
-                                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-t-black border-l-transparent border-r-transparent mt-1"></div>
-                                      )}
+                                      {performanceCategory === "Goed" || performanceCategory === "Good" ? (
+                                        <div className="w-0 h-0 border-l-3 border-r-3 border-t-3 border-t-black border-l-transparent border-r-transparent mt-0.5"></div>
+                                      ) : null}
                                     </div>
 
                                     {/* High performers bar (green) */}
                                     <div className="flex flex-col items-center">
                                       <div
-                                        className="w-6 bg-green-500 rounded-t-sm"
+                                        className="w-4 bg-green-500 rounded-t-sm"
                                         style={{
-                                          height: `${Math.max(5, activity.classDistribution.highPerformers)}px`,
-                                          opacity: performanceCategory === "Uitstekend" ? 1 : 0.5,
+                                          height: `${Math.min(24, Math.max(5, activity.classDistribution.highPerformers))}px`,
+                                          opacity:
+                                            performanceCategory === "Uitstekend" || performanceCategory === "Excellent"
+                                              ? 1
+                                              : 0.5,
                                         }}
                                       ></div>
-                                      {performanceCategory === "Uitstekend" && (
-                                        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-t-black border-l-transparent border-r-transparent mt-1"></div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="mt-1 text-center">
-                                    <div
-                                      className={`text-xs font-medium ${
-                                        performanceCategory === "Onvoldoende"
-                                          ? "text-red-500"
-                                          : performanceCategory === "Goed"
-                                            ? "text-amber-500"
-                                            : "text-green-500"
-                                      }`}
-                                    >
-                                      {performanceCategory}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">{performanceRange}</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      {studentCount} studenten
+                                      {performanceCategory === "Uitstekend" || performanceCategory === "Excellent" ? (
+                                        <div className="w-0 h-0 border-l-3 border-r-3 border-t-3 border-t-black border-l-transparent border-r-transparent mt-0.5"></div>
+                                      ) : null}
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {activity.evaluated && (
+                            {activity.evaluated ? (
                               <>
                                 {/* Progress bar */}
-                                <div className="relative h-2 bg-gray-200 dark:bg-gray-600 rounded-full mb-2 group overflow-hidden">
+                                <div className="relative h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full mb-1 group overflow-hidden">
                                   <div
                                     className={`absolute h-full rounded-full ${
                                       activity.score / activity.maxScore < 0.5
@@ -510,41 +662,19 @@ export function CompetencyDetail({
                                 </div>
 
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Situering: {getRelativePerformanceText(activity.relativePerformance)}
+                                  {getRelativePerformanceText(activity.relativePerformance)}
                                 </div>
-
-                                {/* Notes section */}
-                                {activity.notes && (
-                                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setExpandedNotes(expandedNotes === activity.id ? null : activity.id)
-                                      }}
-                                      className="flex items-center text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-150"
-                                    >
-                                      <MessageSquare className="h-3 w-3 mr-1" />
-                                      {expandedNotes === activity.id ? "Verberg notitie" : "Toon notitie"}
-                                    </button>
-
-                                    {expandedNotes === activity.id && (
-                                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-2 rounded">
-                                        {activity.notes}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
                               </>
-                            )}
+                            ) : null}
 
                             {!activity.evaluated && activity.completed && (
-                              <div className="text-xs text-amber-500 dark:text-amber-400">
-                                Afgelegd maar nog niet geëvalueerd
+                              <div className="text-xs text-amber-500 dark:text-amber-400 mt-1">
+                                {t.completedButNotEvaluated}
                               </div>
                             )}
 
                             {!activity.completed && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400">Nog niet afgelegd</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{t.notCompleted}</div>
                             )}
                           </div>
                         )
@@ -557,11 +687,7 @@ export function CompetencyDetail({
           </div>
         ) : (
           // Activities tab
-          <SubjectActivitiesTab
-            subject={subject}
-            activities={allActivities}
-            semester={semester} // Pass the current semester from props instead of hardcoding
-          />
+          <SubjectActivitiesTab subject={subject} activities={activities} isLoading={isLoadingActivities} />
         )}
       </div>
     </div>

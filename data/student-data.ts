@@ -1,3 +1,13 @@
+/**
+ * Student Data Module
+ *
+ * This module contains mock data and helper functions for the student dashboard.
+ * It provides data structures and functions to simulate a real API for student data,
+ * competencies, activities, and other information needed by the dashboard components.
+ *
+ * @module data/student-data
+ */
+
 // Define the exact subject list
 export const SUBJECTS = [
   "Wiskunde",
@@ -18,7 +28,41 @@ export const SUBJECTS = [
 
 export type Subject = (typeof SUBJECTS)[number]
 
-// Mock xAPI data structure for student performance
+/**
+ * xAPI Statement interface for student performance data
+ *
+ * @interface XAPIStatement
+ * @property {Object} actor - Student information
+ * @property {string} actor.name - Student name
+ * @property {string} actor.mbox - Student email
+ * @property {string} actor.class - Student class
+ * @property {string} [actor.profileImage] - URL to student's profile image
+ * @property {boolean} [actor.atRisk] - Whether the student is at risk
+ * @property {Object} verb - Action verb
+ * @property {string} verb.id - Verb ID
+ * @property {Object} verb.display - Verb display text
+ * @property {string} verb.display.nl - Dutch verb display text
+ * @property {Object} object - Activity object
+ * @property {string} object.id - Activity ID
+ * @property {Object} object.definition - Activity definition
+ * @property {Object} object.definition.name - Activity name
+ * @property {Subject} object.definition.name.nl - Dutch activity name
+ * @property {string} object.definition.type - Activity type
+ * @property {1|2|3} object.definition.semester - Semester number
+ * @property {Object} result - Activity result
+ * @property {Object} result.score - Score information
+ * @property {number} result.score.scaled - Scaled score (0-1)
+ * @property {number} result.score.raw - Raw score
+ * @property {number} result.score.min - Minimum possible score
+ * @property {number} result.score.max - Maximum possible score
+ * @property {boolean} result.completion - Whether the activity is completed
+ * @property {boolean} [result.success] - Whether the activity was successful
+ * @property {Object} [result.competencies] - Competency information
+ * @property {number} result.competencies.achieved - Number of achieved competencies
+ * @property {number} result.competencies.total - Total number of competencies
+ * @property {number} [result.activities] - Number of activities
+ * @property {string} timestamp - Timestamp of the statement
+ */
 export interface XAPIStatement {
   actor: {
     name: string
@@ -61,8 +105,32 @@ export interface XAPIStatement {
   timestamp: string
 }
 
-// First, let's modify the Activity interface to ensure it has a clear link to both subject and competency
-// Update the Activity interface to include subjectId
+/**
+ * Activity interface for student activities
+ *
+ * @interface Activity
+ * @property {string} id - Activity ID
+ * @property {"toets"|"taak"|"examen"} type - Activity type
+ * @property {string} title - Activity title
+ * @property {number} score - Activity score
+ * @property {number} maxScore - Maximum possible score
+ * @property {boolean} completed - Whether the activity is completed
+ * @property {boolean} evaluated - Whether the activity is evaluated
+ * @property {string} date - Activity date (ISO string)
+ * @property {string} [notes] - Activity notes
+ * @property {1|2|3} semester - Semester number
+ * @property {Object} classDistribution - Class distribution information
+ * @property {number} classDistribution.min - Minimum score in class
+ * @property {number} classDistribution.max - Maximum score in class
+ * @property {number} classDistribution.average - Average score in class
+ * @property {number} classDistribution.studentCount - Number of students
+ * @property {number} classDistribution.lowPerformers - Percentage of low performers
+ * @property {number} classDistribution.mediumPerformers - Percentage of medium performers
+ * @property {number} classDistribution.highPerformers - Percentage of high performers
+ * @property {"onder"|"boven"|"gemiddeld"} relativePerformance - Relative performance
+ * @property {string} competencyId - ID of the competency this activity is for
+ * @property {string} subjectId - ID of the subject this activity belongs to
+ */
 export interface Activity {
   id: string
   type: "toets" | "taak" | "examen"
@@ -88,7 +156,22 @@ export interface Activity {
   subjectId: string // Reference to the subject this activity belongs to
 }
 
-// Competentie interface
+/**
+ * Competency interface for student competencies
+ *
+ * @interface Competency
+ * @property {string} id - Competency ID
+ * @property {string} title - Competency title
+ * @property {"not-achieved"|"partially-achieved"|"achieved"} status - Competency status
+ * @property {Object} classDistribution - Class distribution information
+ * @property {number} classDistribution.notAchieved - Percentage of students who have not achieved
+ * @property {number} classDistribution.partiallyAchieved - Percentage of students who have partially achieved
+ * @property {number} classDistribution.achieved - Percentage of students who have achieved
+ * @property {Activity[]} activities - Activities for this competency
+ * @property {string} [notes] - Competency notes
+ * @property {string} globalId - Global identifier for the competency across subjects
+ * @property {string[]} subjects - List of subjects this competency is relevant for
+ */
 export interface Competency {
   id: string
   title: string
@@ -105,7 +188,29 @@ export interface Competency {
   subjects: string[] // List of subjects this competency is relevant for
 }
 
-// Student interface to store student-specific data
+/**
+ * Student interface for student-specific data
+ *
+ * @interface Student
+ * @property {string} id - Student ID
+ * @property {string} name - Student name
+ * @property {string} class - Student class
+ * @property {string} [profileImage] - URL to student's profile image
+ * @property {boolean} atRisk - Whether the student is at risk
+ * @property {string[]} failedSubjects - List of failed subjects
+ * @property {string[]} lowPerformanceSubjects - List of subjects with low performance
+ * @property {Object} competencies - Competency information
+ * @property {Object} competencies[competencyId] - Information for a specific competency
+ * @property {"not-achieved"|"partially-achieved"|"achieved"} competencies[competencyId].status - Competency status
+ * @property {number} competencies[competencyId].progress - Competency progress (0-100)
+ * @property {Object} activities - Activity information
+ * @property {Object} activities[subjectId] - Activities for a specific subject
+ * @property {Object} activities[subjectId][activityId] - Information for a specific activity
+ * @property {boolean} activities[subjectId][activityId].completed - Whether the activity is completed
+ * @property {boolean} activities[subjectId][activityId].evaluated - Whether the activity is evaluated
+ * @property {number} activities[subjectId][activityId].score - Activity score
+ * @property {string} activities[subjectId][activityId].date - Activity date
+ */
 export interface Student {
   id: string
   name: string

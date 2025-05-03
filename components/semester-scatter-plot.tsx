@@ -16,7 +16,18 @@ interface ScatterPlotProps {
 
 export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const { darkMode } = useUI()
+  const { darkMode, language } = useUI()
+
+  // Get the translated title based on the current language
+  const getTranslatedTitle = () => {
+    if (language === "en") {
+      // Convert Dutch semester titles to English
+      if (title === "Semester 1") return "Semester 1"
+      if (title === "Semester 2") return "Semester 2"
+      if (title === "Semester 3") return "Semester 3"
+    }
+    return title
+  }
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -61,7 +72,7 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
 
     // Draw y-axis labels
     ctx.fillStyle = darkMode ? "#a0a0a0" : "#666"
-    ctx.font = "10px Inter"
+    ctx.font = "bold 10px Inter" // Changed from "10px Inter" to "bold 10px Inter"
     ctx.textAlign = "right"
 
     // Draw labels at 20-point intervals
@@ -189,7 +200,7 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
 
   return (
     <Card className="p-2 dark:bg-gray-800 dark:border-gray-700">
-      <div className="text-xs font-medium mb-1 dark:text-gray-200 text-center">{title}</div>
+      <div className="text-xs font-medium mb-1 dark:text-gray-200 text-center">{getTranslatedTitle()}</div>
       <canvas ref={canvasRef} width={240} height={120} className="w-full h-auto max-w-full mx-auto" />
     </Card>
   )

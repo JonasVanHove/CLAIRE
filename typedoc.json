@@ -1,0 +1,14 @@
+{
+  "entryPoints": ["services", "components", "contexts", "data", "types", "hooks", "lib"],
+  "out": "docs",
+  "name": "CLAIRE Student Dashboard",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeExternals": true,
+  "readme": "README.md",
+  "plugin": ["typedoc-plugin-markdown"],
+  "theme": "default",
+  "categorizeByGroup": true,
+  "categoryOrder": ["API", "Components", "Contexts", "Data", "Hooks", "Utils", "*"],
+  "sort": ["alphabetical"]
+}
