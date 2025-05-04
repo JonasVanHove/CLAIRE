@@ -151,29 +151,31 @@ export function StudentSelector() {
             selectedStudent === name ? "bg-[#ECE6F0] dark:bg-gray-700" : "hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
         >
-          <div className="flex items-center gap-2 overflow-hidden">
-            <User className="h-4 w-4 flex-shrink-0 text-[#49454F] dark:text-gray-300" />
-            <span className="text-sm truncate dark:text-gray-200">{name}</span>
-            {atRisk && (
-              <div className="relative group flex-shrink-0">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                  {language === "en"
-                    ? `${atRiskReason || "Student at risk"} (below individual goal)`
-                    : `${atRiskReason || "Student at risk"} (onder individuele doelstelling)`}
+          <div className="flex items-center overflow-hidden">
+            <User className="h-4 w-4 flex-shrink-0 text-[#49454F] dark:text-gray-300 mr-2" />
+            <span className="text-sm truncate dark:text-gray-200 flex-1 mr-2">{name}</span>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {atRisk && (
+                <div className="relative group">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                    {language === "en"
+                      ? `${atRiskReason || "Student at risk"} (below individual goal)`
+                      : `${atRiskReason || "Student at risk"} (onder individuele doelstelling)`}
+                  </div>
                 </div>
-              </div>
-            )}
-            {lowAttendance && (
-              <div className="relative group flex-shrink-0">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                  {language === "en"
-                    ? `Attendance (${attendancePercentage}%) is below threshold`
-                    : `Aanwezigheid (${attendancePercentage}%) is onder de grenswaarde`}
+              )}
+              {lowAttendance && (
+                <div className="relative group">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                    {language === "en"
+                      ? `Attendance (${attendancePercentage}%) is below threshold`
+                      : `Aanwezigheid (${attendancePercentage}%) is onder de grenswaarde`}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           {selectedStudent === name && <Check className="h-4 w-4 flex-shrink-0 text-[#49454F] dark:text-gray-300" />}
         </div>

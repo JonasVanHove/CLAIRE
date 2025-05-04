@@ -4,7 +4,8 @@ import { SubjectCard } from "@/components/subject-card"
 import { ProgressHeader } from "@/components/progress-header"
 import { StudentSelector } from "@/components/student-selector"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronDown, User, FileText, Calendar, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
+// Voeg imports toe voor de ChevronDown en ChevronUp iconen
+import { ChevronDown, User, FileText, Calendar, CheckCircle2, XCircle, AlertTriangle, ChevronUp } from "lucide-react"
 import { SemesterScatterPlot } from "@/components/semester-scatter-plot"
 import { useStudent } from "@/contexts/student-context"
 import { useMemo, useState, useRef, useEffect } from "react"
@@ -39,8 +40,13 @@ export default function Dashboard() {
 // Add translations object inside the DashboardContent component
 function DashboardContent() {
   const { selectedStudent, selectedClass } = useStudent()
-  const [showNotes, setShowProfile] = useState(false)
-  const [showProfile, setShowNotes] = useState(false)
+  // Verander deze regels:
+  // const [showNotes, setShowProfile] = useState(false)
+  // const [showProfile, setShowNotes] = useState(false)
+
+  // Naar:
+  const [showProfile, setShowProfile] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
   const { compactView, darkMode, language } = useUI()
   const [activeSemester, setActiveSemester] = useState<string>("semester1")
   const profileRef = useRef<HTMLDivElement>(null)
@@ -57,6 +63,15 @@ function DashboardContent() {
 
   // State for tracking if student is above their average
   const [isAboveAverage, setIsAboveAverage] = useState(false)
+
+  // Functie om het semesternummer te extraheren uit de activeSemester string
+  const getSelectedSemesterNumber = (): 1 | 2 | 3 => {
+    const match = activeSemester.match(/semester(\d)/)
+    if (match && ["1", "2", "3"].includes(match[1])) {
+      return Number.parseInt(match[1]) as 1 | 2 | 3
+    }
+    return 1 // Default naar semester 1 als er geen match is
+  }
 
   // Get the competency percentage
   const { achieved, total } = getTotalCompetencies(selectedStudent)
@@ -114,6 +129,8 @@ function DashboardContent() {
       individualGoal: "Individual goal:",
       personalGoal: "Personal goal for this student",
       schoolYear: "School year",
+      showMore: "Show more",
+      showLess: "Show less",
     },
     nl: {
       noStudentSelected: "Geen leerling geselecteerd",
@@ -165,6 +182,8 @@ function DashboardContent() {
       individualGoal: "Individuele doelstelling:",
       personalGoal: "Persoonlijke doelstelling voor deze leerling",
       schoolYear: "Schooljaar",
+      showMore: "Toon meer",
+      showLess: "Toon minder",
     },
   }
 
@@ -314,28 +333,33 @@ function DashboardContent() {
     const subjects = ["Wiskunde", "Nederlands", "Frans", "Engels"]
     const result: { subject: string; score: number; status: string; competencies: string }[] = []
 
+    // Haal het huidige geselecteerde semesternummer op
+    const selectedSemester = getSelectedSemesterNumber()
+
     subjects.forEach((subjectName) => {
       const subjectData = studentData.find(
-        (s) => s.object.definition.name.nl === subjectName && s.object.definition.semester === 3, // Get the most recent semester
+        (s) => s.object.definition.name.nl === subjectName && s.object.definition.semester === selectedSemester,
       )
 
       if (subjectData) {
-        const score = subjectData.result.score.raw
-        const competencies = subjectData.result.competencies
-          ? `${subjectData.result.competencies.achieved}/${subjectData.result.competencies.total}`
-          : "0/0"
+        // Haal de competentie-informatie op
+        const achieved = subjectData.result.competencies?.achieved || 0
+        const total = subjectData.result.competencies?.total || 1
+        // Bereken het percentage op basis van behaalde competenties
+        const competencyScore = Math.round((achieved / total) * 100)
+        const competencies = `${achieved}/${total}`
 
         result.push({
           subject: subjectName,
-          score,
+          score: competencyScore,
           competencies,
-          status: score < 50 ? "danger" : score < 70 ? "warning" : "success",
+          status: competencyScore < 50 ? "danger" : competencyScore < 70 ? "warning" : "success",
         })
       }
     })
 
     return result
-  }, [studentData])
+  }, [studentData, activeSemester]) // Voeg activeSemester toe als dependency
 
   // Voeg deze functie toe voor het bepalen van de ingeschreven jaren
   const getEnrollmentYears = (studentName: string) => {
@@ -373,6 +397,12 @@ function DashboardContent() {
       grade,
       currentGrade,
     }
+  }
+
+  // Functie om te controleren of afwezigheidsdata beschikbaar is
+  const hasAttendanceDetailData = () => {
+    // Expliciet aangeven dat we geen gedetailleerde afwezigheidsdata hebben
+    return false
   }
 
   // Voeg deze regel toe aan het profiel gedeelte, na de Calendar regel
@@ -503,6 +533,11 @@ function DashboardContent() {
       setIsSavingGoal(false)
     }
   }
+
+  // Voeg state toe voor het bijhouden van uitgeklapte secties (na de andere useState declaraties)
+  const [expandedAttendance, setExpandedAttendance] = useState(false)
+  const [expandedAttentionPoints, setExpandedAttentionPoints] = useState(false)
+  const [expandedStatus, setExpandedStatus] = useState(false)
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -709,9 +744,20 @@ function DashboardContent() {
                           <div>
                             <div className="flex justify-between text-xs mb-1">
                               <span className="dark:text-gray-300">{t.attendance}</span>
-                              <span className="dark:text-gray-300">{attendanceData.present}%</span>
+                              <span className="dark:text-gray-300">
+                                {attendanceData && typeof attendanceData.present === "number"
+                                  ? `${attendanceData.present}%`
+                                  : "Geen data"}
+                              </span>
                             </div>
-                            <Progress value={attendanceData.present} className="h-2 bg-gray-200 dark:bg-gray-600" />
+                            <Progress
+                              value={
+                                attendanceData && typeof attendanceData.present === "number"
+                                  ? attendanceData.present
+                                  : 0
+                              }
+                              className="h-2 bg-gray-200 dark:bg-gray-600"
+                            />
                             {/* Add threshold marker */}
                             <div className="relative h-0">
                               <div
@@ -720,35 +766,81 @@ function DashboardContent() {
                               />
                             </div>
                           </div>
-                          <div className="flex gap-4 mt-2">
-                            <div className="flex items-center gap-1 text-xs">
-                              <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              <span className="dark:text-gray-300">
-                                {t.authorized}: {attendanceData.authorized}%
-                              </span>
+                          {/* Aanwezigheidspercentages */}
+                          <div className="mt-2 space-y-2">
+                            {/* Gewettigde afwezigheid */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1 text-xs">
+                                <CheckCircle2
+                                  className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-green-500" : "text-gray-400"}`}
+                                />
+                                <span className="dark:text-gray-300 font-medium">{t.authorized}:</span>
+                              </div>
+                              <div className="text-xs dark:text-gray-300">
+                                {hasAttendanceDetailData() ? (
+                                  <>
+                                    <span className="font-medium">{attendanceData.authorized}%</span>
+                                    <span className="text-gray-500 dark:text-gray-400 ml-1">
+                                      (~{Math.round(attendanceData.authorized * 0.36)}{" "}
+                                      {attendanceData.authorized * 0.36 > 1 ? "dagen" : "dag"})
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1 text-xs">
-                              <XCircle className="h-3 w-3 text-red-500" />
-                              <span className="dark:text-gray-300">
-                                {t.unauthorized}: {attendanceData.unauthorized}%
-                              </span>
+                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                              <div
+                                className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                style={{ width: "0%" }}
+                              ></div>
                             </div>
-                          </div>
-                          {/* Add status message based on threshold */}
-                          <div
-                            className={`text-xs mt-2 ${
-                              attendanceData.present >= attendanceThreshold
-                                ? "text-green-600 dark:text-green-400"
-                                : attendanceData.present >= attendanceThreshold - 10
-                                  ? "text-amber-600 dark:text-amber-400"
-                                  : "text-red-600 dark:text-red-400"
-                            }`}
-                          >
-                            {attendanceData.present >= attendanceThreshold
-                              ? `${t.attendance} ${t.meetsThreshold}`
-                              : attendanceData.present >= attendanceThreshold - 10
-                                ? `${t.attendance} ${t.attendanceBelow}`
-                                : `${t.criticalAttendance} (${attendanceThreshold}%)`}
+
+                            {/* Ongewettigde afwezigheid */}
+                            <div className="flex items-center justify-between mt-1">
+                              <div className="flex items-center gap-1 text-xs">
+                                <XCircle
+                                  className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-red-500" : "text-gray-400"}`}
+                                />
+                                <span className="dark:text-gray-300 font-medium">{t.unauthorized}:</span>
+                              </div>
+                              <div className="text-xs dark:text-gray-300">
+                                {hasAttendanceDetailData() ? (
+                                  <>
+                                    <span className="font-medium">{attendanceData.unauthorized}%</span>
+                                    <span className="text-gray-500 dark:text-gray-400 ml-1">
+                                      (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
+                                      {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                              <div
+                                className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                style={{ width: "0%" }}
+                              ></div>
+                            </div>
+
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {attendanceData && typeof attendanceData.unauthorized === "number" ? (
+                                attendanceData.unauthorized > 10 ? (
+                                  "Te veel ongewettigde afwezigheden"
+                                ) : attendanceData.unauthorized > 5 ? (
+                                  "Let op: ongewettigde afwezigheden nemen toe"
+                                ) : (
+                                  "Ongewettigde afwezigheden binnen aanvaardbare grenzen"
+                                )
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">
+                                  Geen gegevens over ongewettigde afwezigheden beschikbaar
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -771,7 +863,7 @@ function DashboardContent() {
                                           : "text-green-600"
                                     }`}
                                   >
-                                    {subject.score.toFixed(1)}%
+                                    {subject.score}%
                                   </span>
                                   <span className="text-gray-500 dark:text-gray-400">({subject.competencies})</span>
                                 </div>
@@ -811,6 +903,7 @@ function DashboardContent() {
               <FileText className="h-5 w-5" />
             </button>
 
+            {/* Vervang de notitie-popup sectie met deze verbeterde versie */}
             {showNotes && selectedStudent && (
               <div className="absolute left-0 mt-2 w-[400px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
                 <div className="p-4">
@@ -826,123 +919,237 @@ function DashboardContent() {
                     </button>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md border border-gray-200 dark:border-gray-600">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">{t.noNotes}</p>
-                  </div>
+                  <div className="max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md border border-gray-200 dark:border-gray-600">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">{t.noNotes}</p>
+                    </div>
 
-                  {/* Positive section - show when attendance is above threshold */}
-                  {attendanceData.present >= attendanceThreshold && (
-                    <div className="mt-4">
-                      <h3 className="text-md font-medium text-green-600 dark:text-green-500 flex items-center gap-2 mb-2">
-                        <CheckCircle2 className="h-4 w-4" />
-                        {t.withinTarget}
-                      </h3>
-                      <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md border border-green-200 dark:border-green-800">
-                        <p className="text-sm text-green-800 dark:text-green-400 font-medium">
-                          {t.attendance} ({attendanceData.present}%) {t.meetsThreshold} ({attendanceThreshold}%)
-                        </p>
-                        <p className="text-xs text-green-700 dark:text-green-400 mt-1">{t.goodAttendance}.</p>
-                        <div className="flex gap-4 mt-2">
-                          <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
-                            <CheckCircle2 className="h-3 w-3" />
-                            <span>
-                              {t.authorized}: {attendanceData.authorized}%
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
-                            <XCircle className="h-3 w-3" />
-                            <span>
-                              {t.unauthorized}: {attendanceData.unauthorized}%
-                            </span>
+                    {/* Positive section - show when attendance is above threshold */}
+                    {attendanceData.present >= attendanceThreshold && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-md font-medium text-green-600 dark:text-green-500 flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4" />
+                            {t.withinTarget}
+                          </h3>
+                          <button
+                            onClick={() => setExpandedAttendance(!expandedAttendance)}
+                            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center"
+                          >
+                            {expandedAttendance ? t.showLess : t.showMore}
+                            {expandedAttendance ? (
+                              <ChevronUp className="h-3 w-3 ml-1" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            )}
+                          </button>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md border border-green-200 dark:border-green-800">
+                          <p className="text-sm text-green-800 dark:text-green-400 font-medium">
+                            {t.attendance} ({attendanceData.present}%) {t.meetsThreshold} ({attendanceThreshold}%)
+                          </p>
+
+                          {/* Expandable content */}
+                          <div
+                            className={`overflow-hidden transition-all duration-300 ${expandedAttendance ? "max-h-40 overflow-y-auto mt-2" : "max-h-0"}`}
+                          >
+                            <p className="text-xs text-green-700 dark:text-green-400">{t.goodAttendance}.</p>
+                            {/* Vervang ook de vergelijkbare sectie in de notitie-popup (rond regel 1000) door: */}
+                            <div className="flex flex-col gap-2 mt-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+                                  <CheckCircle2
+                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
+                                  />
+                                  <span className="font-medium">{t.authorized}:</span>
+                                </div>
+                                <div className="text-xs text-green-700 dark:text-green-400">
+                                  {hasAttendanceDetailData() ? (
+                                    <>
+                                      <span className="font-medium">{attendanceData.authorized}%</span>
+                                      <span className="opacity-75 ml-1">
+                                        (~{Math.round(attendanceData.authorized * 0.36)}{" "}
+                                        {attendanceData.authorized * 0.36 > 1 ? "dagen" : "dag"})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="w-full bg-green-200 dark:bg-green-900/30 rounded-full h-1.5">
+                                <div
+                                  className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                  style={{
+                                    width: "0%",
+                                  }}
+                                ></div>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-1">
+                                <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+                                  <XCircle
+                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
+                                  />
+                                  <span className="font-medium">{t.unauthorized}:</span>
+                                </div>
+                                <div className="text-xs text-green-700 dark:text-green-400">
+                                  {hasAttendanceDetailData() ? (
+                                    <>
+                                      <span className="font-medium">{attendanceData.unauthorized}%</span>
+                                      <span className="opacity-75 ml-1">
+                                        (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
+                                        {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="w-full bg-green-200 dark:bg-green-900/30 rounded-full h-1.5">
+                                <div
+                                  className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                  style={{
+                                    width: "0%",
+                                  }}
+                                ></div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* At Risk sectie - tonen als de student at risk is OF als aanwezigheid onder de grenswaarde is */}
-                  {((isStudentAtRisk(selectedStudent) && percentage < individualGoal) ||
-                    attendanceData.present < attendanceThreshold) && (
-                    <div className="mt-4">
-                      <h3 className="text-md font-medium text-amber-600 dark:text-amber-500 flex items-center gap-2 mb-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        {t.attentionPoints}
-                      </h3>
-                      <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
-                        {isStudentAtRisk(selectedStudent) && percentage < individualGoal && (
-                          <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
-                            {getAtRiskReason(selectedStudent)}
-                          </p>
-                        )}
-
-                        {/* Aanwezigheid waarschuwing */}
-                        {attendanceData.present < attendanceThreshold && (
-                          <div
-                            className={isStudentAtRisk(selectedStudent) && percentage < individualGoal ? "mt-3" : ""}
+                    {/* At Risk section - show when student is at risk OR attendance is below threshold */}
+                    {((isStudentAtRisk(selectedStudent) && percentage < individualGoal) ||
+                      attendanceData.present < attendanceThreshold) && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-md font-medium text-amber-600 dark:text-amber-500 flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            {t.attentionPoints}
+                          </h3>
+                          <button
+                            onClick={() => setExpandedAttentionPoints(!expandedAttentionPoints)}
+                            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center"
                           >
+                            {expandedAttentionPoints ? t.showLess : t.showMore}
+                            {expandedAttentionPoints ? (
+                              <ChevronUp className="h-3 w-3 ml-1" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            )}
+                          </button>
+                        </div>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
+                          {/* Always show the most important information */}
+                          {isStudentAtRisk(selectedStudent) && percentage < individualGoal && (
                             <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
-                              {t.attendance} ({attendanceData.present}%) {t.attendanceBelow} ({attendanceThreshold}%)
+                              {getAtRiskReason(selectedStudent)}
                             </p>
-                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                              {attendanceData.present >= attendanceThreshold - 10
-                                ? t.studentMustAttend
-                                : t.criticalAttendance}
-                            </p>
-                            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                              {t.unauthorized}: {attendanceData.unauthorized}%
-                            </p>
-                          </div>
-                        )}
+                          )}
 
-                        {competencyIssues.length > 0 && percentage < individualGoal && (
-                          <div className="mt-3">
-                            <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-1">
-                              {t.competencyIssues}:
-                            </p>
-                            <ul className="list-disc pl-5 text-xs text-amber-600 dark:text-amber-500 space-y-1">
-                              {competencyIssues.map((issue, index) => (
-                                <li key={index}>{issue}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                          {/* Attendance warning - always show if below threshold */}
+                          {attendanceData.present < attendanceThreshold && (
+                            <div
+                              className={isStudentAtRisk(selectedStudent) && percentage < individualGoal ? "mt-3" : ""}
+                            >
+                              <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
+                                {t.attendance} ({attendanceData.present}%) {t.attendanceBelow} ({attendanceThreshold}%)
+                              </p>
+                            </div>
+                          )}
 
-                        <p className="text-xs text-amber-600 dark:text-amber-500 mt-3">{t.needsGuidance}</p>
+                          {/* Expandable content */}
+                          <div
+                            className={`overflow-hidden transition-all duration-300 ${expandedAttentionPoints ? "max-h-60 overflow-y-auto mt-3" : "max-h-0"}`}
+                          >
+                            {attendanceData.present < attendanceThreshold && (
+                              <>
+                                <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">
+                                  {attendanceData.present >= attendanceThreshold - 10
+                                    ? t.studentMustAttend
+                                    : t.criticalAttendance}
+                                </p>
+                                <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">
+                                  {t.unauthorized}: {attendanceData.unauthorized}%
+                                </p>
+                              </>
+                            )}
+
+                            {competencyIssues.length > 0 && percentage < individualGoal && (
+                              <div className="mt-2">
+                                <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-1">
+                                  {t.competencyIssues}:
+                                </p>
+                                <ul className="list-disc pl-5 text-xs text-amber-600 dark:text-amber-500 space-y-1">
+                                  {competencyIssues.map((issue, index) => (
+                                    <li key={index}>{issue}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">{t.needsGuidance}</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {/* Status sectie - altijd tonen */}
-                  <div className="mt-4">
-                    <h3 className="text-md font-medium text-blue-600 dark:text-blue-500 flex items-center gap-2 mb-2">
-                      <FileText className="h-4 w-4" />
-                      {t.status}
-                    </h3>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
-                        {isAboveAverage && percentage >= individualGoal && attendanceData.present >= attendanceThreshold
-                          ? t.passed
-                          : t.evaluationNeeded}
-                      </p>
-                      <div className="mt-2">
-                        <h4 className="text-xs font-medium mb-1 text-blue-700 dark:text-blue-400">
-                          {t.statusCalculation}:
-                        </h4>
-                        <ul className="list-disc pl-4 space-y-1 text-xs text-blue-700 dark:text-blue-400">
-                          <li>
-                            {t.competencies}: {percentage.toFixed(2)}% {percentage >= individualGoal ? "✓" : "✗"} (
-                            {t.goal}: {individualGoal}%)
-                          </li>
-                          <li>
-                            {t.attendance}: {attendanceData.present}%{" "}
-                            {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} ({t.goal}: {attendanceThreshold}
-                            %)
-                          </li>
-                          <li>
-                            {t.personalAverage}: {isAboveAverage ? "✓" : "✗"}
-                          </li>
-                        </ul>
-                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.passedStatus}</p>
-                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.individualGoalExplanation}</p>
+                    )}
+
+                    {/* Status section - always show */}
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-md font-medium text-blue-600 dark:text-blue-500 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          {t.status}
+                        </h3>
+                        <button
+                          onClick={() => setExpandedStatus(!expandedStatus)}
+                          className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center"
+                        >
+                          {expandedStatus ? t.showLess : t.showMore}
+                          {expandedStatus ? (
+                            <ChevronUp className="h-3 w-3 ml-1" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 ml-1" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
+                          {isAboveAverage &&
+                          percentage >= individualGoal &&
+                          attendanceData.present >= attendanceThreshold
+                            ? t.passed
+                            : t.evaluationNeeded}
+                        </p>
+
+                        {/* Expandable content */}
+                        <div
+                          className={`overflow-hidden transition-all duration-300 ${expandedStatus ? "max-h-60 overflow-y-auto mt-2" : "max-h-0"}`}
+                        >
+                          <h4 className="text-xs font-medium mb-1 text-blue-700 dark:text-blue-400">
+                            {t.statusCalculation}:
+                          </h4>
+                          <ul className="list-disc pl-4 space-y-1 text-xs text-blue-700 dark:text-blue-400">
+                            <li>
+                              {t.competencies}: {percentage.toFixed(2)}% {percentage >= individualGoal ? "✓" : "✗"} (
+                              {t.goal}: {individualGoal}%)
+                            </li>
+                            <li>
+                              {t.attendance}: {attendanceData.present}%{" "}
+                              {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} ({t.goal}:{" "}
+                              {attendanceThreshold}
+                              %)
+                            </li>
+                            <li>
+                              {t.personalAverage}: {isAboveAverage ? "✓" : "✗"}
+                            </li>
+                          </ul>
+                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.passedStatus}</p>
+                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.individualGoalExplanation}</p>
+                        </div>
                       </div>
                     </div>
                   </div>

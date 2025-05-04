@@ -216,28 +216,6 @@ export function SettingsMenu() {
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-700 mb-3">{t.settings}</h3>
 
             <div className="space-y-4">
-              {/* Dark Mode Toggle - with consistent label */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {darkMode ? <Moon className="h-4 w-4 text-[#49454F]" /> : <Sun className="h-4 w-4 text-[#49454F]" />}
-                  <span className="text-sm text-gray-700 dark:text-gray-700">
-                    {language === "nl" ? "Donkere modus" : "Dark mode"}
-                  </span>
-                </div>
-                <button
-                  onClick={toggleDarkMode}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                    darkMode ? "bg-[#75b265]" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      darkMode ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-
               {/* Hide Non-Completed Toggle - with consistent label and tooltip */}
               <div className="flex items-center justify-between group relative">
                 <div className="flex items-center gap-2">
@@ -290,6 +268,28 @@ export function SettingsMenu() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       compactView ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Dark Mode Toggle - with consistent label */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {darkMode ? <Moon className="h-4 w-4 text-[#49454F]" /> : <Sun className="h-4 w-4 text-[#49454F]" />}
+                  <span className="text-sm text-gray-700 dark:text-gray-700">
+                    {language === "nl" ? "Donkere modus" : "Dark mode"}
+                  </span>
+                </div>
+                <button
+                  onClick={toggleDarkMode}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    darkMode ? "bg-[#75b265]" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      darkMode ? "translate-x-6" : "translate-x-1"
                     }`}
                   />
                 </button>
