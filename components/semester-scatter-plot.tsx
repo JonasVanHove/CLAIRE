@@ -202,9 +202,9 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
         // Calculate x position with even spacing
         const xPos = startX + currentStudentIndex * (dotSize * 2 + dotSpacing) + dotSize
 
-        // Create gradient for the current student dot
+        // Create gradient for the current student dot with more subtle effect
         const gradient = ctx.createRadialGradient(xPos, y, 0, xPos, y, dotSize + 1.5)
-        gradient.addColorStop(0, "#60a5fa") // Lighter blue in center
+        gradient.addColorStop(0, "#3b82f6") // Less contrast - medium blue in center
         gradient.addColorStop(1, "#2563eb") // Darker blue at edges
 
         // Draw the current student dot with gradient

@@ -174,6 +174,9 @@ function DashboardContent() {
       hoursPerWeek: "Hours per week",
       ascending: "Ascending",
       descending: "Descending",
+      enrollmentHistory: "Years enrolled at this school",
+      years: "years",
+      numberOfYears: "Number of years",
     },
     nl: {
       noStudentSelected: "Geen leerling geselecteerd",
@@ -212,7 +215,7 @@ function DashboardContent() {
         'De individuele doelstelling is afgestemd op de capaciteiten en vooruitgang van de leerling. Leerlingen worden als "at risk" beschouwd wanneer ze onder hun persoonlijke doelstelling presteren.',
       mainSubjects: "Hoofdvakken",
       enrolledSince: "Ingeschreven sinds",
-      schoolJaren: "Schooljaren",
+      schoolYears: "Schooljaren",
       grade: "Graad",
       year: "jaar",
       attendanceThreshold: "Aanwezigheid:",
@@ -237,6 +240,9 @@ function DashboardContent() {
       hoursPerWeek: "Uren per week",
       ascending: "Oplopend",
       descending: "Aflopend",
+      enrollmentHistory: "Jaren ingeschreven op deze school",
+      years: "jaren",
+      numberOfYears: "Aantal jaren",
     },
   }
 
@@ -782,176 +788,212 @@ function DashboardContent() {
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-                        <Image
-                          src={profileImage || "/placeholder.svg"}
-                          alt={selectedStudent}
-                          width={64}
-                          height={64}
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-md font-medium text-gray-900 dark:text-gray-100">{selectedStudent}</h3>
+                  <div className="flex flex-col gap-5">
+                    {/* Profile header with image and basic info */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                      <div className="flex items-start">
+                        {/* Profile image with status indicator */}
+                        <div className="relative mr-4">
+                          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700 shadow-sm">
+                            <Image
+                              src={profileImage || "/placeholder.svg"}
+                              alt={selectedStudent}
+                              width={80}
+                              height={80}
+                              className="object-cover"
+                            />
+                          </div>
                           {isStudentAtRisk(selectedStudent) && (
-                            <div className="relative group">
-                              <AlertTriangle className="h-4 w-4 text-amber-500" />
-                              <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                            <div className="absolute -bottom-1 -right-1 bg-amber-100 dark:bg-amber-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
+                              <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
                                 {getAtRiskReason(selectedStudent)}
                               </div>
                             </div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{selectedClass}</p>
-                        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{t.schoolYear} 2023-2024</span>
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          <p>
-                            {t.grade} {enrollmentInfo.grade} | {enrollmentInfo.currentGrade}e {t.year}
-                          </p>
-                          <p className="text-xs mt-1">
-                            {t.enrolledSince} {enrollmentInfo.years[0]}
-                          </p>
-                          <p className="text-xs mt-1">
-                            {t.schoolYears}: {enrollmentInfo.years.join(", ")}
-                          </p>
-                        </div>
 
-                        {/* Aanwezigheid grenswaarde instelling */}
-                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between">
-                            <label
-                              htmlFor="attendance-threshold"
-                              className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              {t.attendanceThreshold}
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center">
-                                <input
-                                  id="attendance-threshold"
-                                  type="number"
-                                  min="50"
-                                  max="100"
-                                  ref={thresholdInputRef}
-                                  defaultValue={attendanceThreshold}
-                                  className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
-                                />
-                                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
+                        {/* Student information */}
+                        <div className="flex-1">
+                          <div className="flex flex-col">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{selectedStudent}</h3>
+                            <div className="flex items-center mt-1">
+                              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-md">
+                                {selectedClass}
+                              </span>
+                            </div>
+
+                            {/* School year and grade info */}
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                                <Calendar className="h-4 w-4 mr-1.5 text-gray-500 dark:text-gray-400" />
+                                <span>{t.schoolYear} 2023-2024</span>
                               </div>
-                              <button
-                                className={`px-2 py-1 text-xs ${
-                                  isSaving
-                                    ? "bg-gray-400"
-                                    : "bg-gradient-to-r from-red-500 to-amber-500 hover:from-red-600 hover:to-amber-600"
-                                } text-white rounded flex items-center gap-1 shadow-sm transition-all duration-200`}
-                                disabled={isSaving}
-                                onClick={handleSaveAttendanceThreshold}
-                              >
-                                {isSaving ? (
-                                  <>
-                                    <svg
-                                      className="animate-spin -ml-1 mr-2 h-3 w-3 text-white"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      ></circle>
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      ></path>
-                                    </svg>
-                                    {t.saving}
-                                  </>
-                                ) : (
-                                  t.save
-                                )}
-                              </button>
+                              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                                <span>
+                                  {t.grade} {enrollmentInfo.grade} | {enrollmentInfo.currentGrade}e {t.year}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Enrollment info */}
+                            <div className="mt-2 flex items-center gap-4 text-xs">
+                              <div className="flex items-center">
+                                <span className="text-gray-500 dark:text-gray-400">{t.enrolledSince}</span>
+                                <span className="ml-1 font-medium text-gray-700 dark:text-gray-300">
+                                  {enrollmentInfo.years[0]}
+                                </span>
+                              </div>
+                              <div className="flex items-center">
+                                <span className="text-gray-500 dark:text-gray-400">{t.numberOfYears}</span>
+                                <span
+                                  className="ml-1 font-medium text-gray-700 dark:text-gray-300 group relative cursor-help"
+                                  title={t.enrollmentHistory}
+                                >
+                                  {enrollmentInfo.years.length} {enrollmentInfo.years.length === 1 ? t.year : t.years}
+                                  <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-black/90 text-white text-xs p-2 rounded-md z-50 whitespace-nowrap shadow-lg">
+                                    {enrollmentInfo.years.join(", ")}
+                                  </span>
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.minimumAttendance}</p>
-                        </div>
-
-                        {/* Individuele doelstelling instelling */}
-                        <div className="mt-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between">
-                            <label
-                              htmlFor="individual-goal"
-                              className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                            >
-                              {t.individualGoal}:
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center">
-                                <input
-                                  id="individual-goal"
-                                  type="number"
-                                  min="50"
-                                  max="100"
-                                  ref={goalInputRef}
-                                  defaultValue={individualGoal}
-                                  className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
-                                />
-                                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
-                              </div>
-                              <button
-                                className={`px-2 py-1 text-xs ${
-                                  isSavingGoal
-                                    ? "bg-gray-400"
-                                    : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-                                } text-white rounded flex items-center gap-1 shadow-sm transition-all duration-200`}
-                                disabled={isSavingGoal}
-                                onClick={handleSaveIndividualGoal}
-                              >
-                                {isSavingGoal ? (
-                                  <>
-                                    <svg
-                                      className="animate-spin -ml-1 mr-2 h-3 w-3 text-white"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      ></circle>
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      ></path>
-                                    </svg>
-                                    {t.saving}
-                                  </>
-                                ) : (
-                                  t.save
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.personalGoal}</p>
                         </div>
                       </div>
                     </div>
 
+                    {/* Settings sections */}
+                    <div className="space-y-4">
+                      {/* Attendance threshold setting */}
+                      <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <label
+                            htmlFor="attendance-threshold"
+                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            {t.attendanceThreshold}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center">
+                              <input
+                                id="attendance-threshold"
+                                type="number"
+                                min="50"
+                                max="100"
+                                ref={thresholdInputRef}
+                                defaultValue={attendanceThreshold}
+                                className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
+                              />
+                              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
+                            </div>
+                            <button
+                              className={`px-2 py-1 text-xs ${
+                                isSaving
+                                  ? "bg-gray-400"
+                                  : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                              } text-gray-700 dark:text-gray-200 rounded-md border border-gray-300 dark:border-gray-600 flex items-center gap-1 shadow-sm transition-all duration-200`}
+                              disabled={isSaving}
+                              onClick={handleSaveAttendanceThreshold}
+                            >
+                              {isSaving ? (
+                                <>
+                                  <svg
+                                    className="animate-spin -ml-1 mr-2 h-3 w-3 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                  {t.saving}
+                                </>
+                              ) : (
+                                t.save
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.minimumAttendance}</p>
+                      </div>
+
+                      {/* Individual goal setting */}
+                      <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <label
+                            htmlFor="individual-goal"
+                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                          >
+                            {t.individualGoal}:
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center">
+                              <input
+                                id="individual-goal"
+                                type="number"
+                                min="50"
+                                max="100"
+                                ref={goalInputRef}
+                                defaultValue={individualGoal}
+                                className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
+                              />
+                              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
+                            </div>
+                            <button
+                              className={`px-2 py-1 text-xs ${
+                                isSavingGoal
+                                  ? "bg-gray-400"
+                                  : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                              } text-gray-700 dark:text-gray-200 rounded-md border border-gray-300 dark:border-gray-600 flex items-center gap-1 shadow-sm transition-all duration-200`}
+                              disabled={isSavingGoal}
+                              onClick={handleSaveIndividualGoal}
+                            >
+                              {isSavingGoal ? (
+                                <>
+                                  <svg
+                                    className="animate-spin -ml-1 mr-2 h-3 w-3 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                  {t.saving}
+                                </>
+                              ) : (
+                                t.save
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.personalGoal}</p>
+                      </div>
+                    </div>
+
+                    {/* Data visualization sections */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Attendance section */}
                       <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
@@ -1254,11 +1296,23 @@ function DashboardContent() {
                           {/* Attendance warning - always show if below threshold */}
                           {attendanceData.present < attendanceThreshold && (
                             <div
-                              className={isStudentAtRisk(selectedStudent) && percentage < individualGoal ? "mt-3" : ""}
+                              className={`${isStudentAtRisk(selectedStudent) && percentage < individualGoal ? "mt-3" : ""} bg-amber-50/50 dark:bg-amber-900/10 rounded-md p-2 border border-amber-200 dark:border-amber-800/30`}
                             >
-                              <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
-                                {t.attendance} ({attendanceData.present}%) {t.attendanceBelow} ({attendanceThreshold}%)
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                <div>
+                                  <p className="text-sm text-amber-800 dark:text-amber-400 font-medium flex flex-wrap items-center gap-1">
+                                    <span>{t.attendance}</span>
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                                      {attendanceData.present}%
+                                    </span>
+                                    <span>{t.attendanceBelow}</span>
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                                      {attendanceThreshold}%
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           )}
 

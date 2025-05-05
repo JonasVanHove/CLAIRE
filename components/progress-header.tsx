@@ -258,7 +258,12 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
               const currentSemesterPercentage = (semData.achieved / totalScale) * 100
 
               // Define colors for each semester with the specified hex values
-              const semesterColors = ["#5b5760", "#a39cac", "#2a282c"]
+              // Define gradient colors for each semester
+              const semesterGradients = [
+                ["#6b6770", "#4b4750"], // Semester 1: darker to lighter purple-gray
+                ["#b3acbc", "#93889c"], // Semester 2: darker to lighter lavender
+                ["#3a383c", "#1a181c"], // Semester 3: darker to lighter dark gray
+              ]
 
               return (
                 <div key={semData.semester} className="flex-1">
@@ -286,7 +291,7 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
                           style={{
                             width: `${prevPercentage}%`,
                             left: `${prevOffset}%`,
-                            backgroundColor: semesterColors[prevIndex],
+                            background: `linear-gradient(to right, ${semesterGradients[prevIndex][0]}, ${semesterGradients[prevIndex][1]})`,
                           }}
                         />
                       )
@@ -298,7 +303,7 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
                       style={{
                         width: `${currentSemesterPercentage}%`,
                         left: `${cumulativePercentage - currentSemesterPercentage}%`,
-                        backgroundColor: semesterColors[index],
+                        background: `linear-gradient(to right, ${semesterGradients[index][0]}, ${semesterGradients[index][1]})`,
                       }}
                     />
                   </div>
