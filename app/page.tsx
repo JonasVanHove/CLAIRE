@@ -6,6 +6,8 @@ import { StudentSelector } from "@/components/student-selector"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // Voeg imports toe voor de ChevronDown en ChevronUp iconen
 import { ChevronDown, User, FileText, Calendar, CheckCircle2, XCircle, AlertTriangle, ChevronUp } from "lucide-react"
+// Voeg deze imports toe bovenaan het bestand, bij de andere imports
+import { ArrowDown, ArrowUp, ArrowUpDown, Clock, Activity, BarChart3 } from "lucide-react"
 import { SemesterScatterPlot } from "@/components/semester-scatter-plot"
 import { useStudent } from "@/contexts/student-context"
 import { useMemo, useState, useRef, useEffect } from "react"
@@ -28,6 +30,34 @@ import { Progress } from "@/components/ui/progress"
 import { InfoPopup } from "@/components/info-popup"
 // Add the import for the API service at the top of the file
 import { api } from "@/services/api"
+// Voeg deze import toe bij de andere imports bovenaan het bestand
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+// Voeg deze type definitie toe na de bestaande imports
+// Definieer een type voor de sorteeroptie
+type SortOption = {
+  field: "score" | "activities" | "hours"
+  direction: "asc" | "desc"
+}
+
+// Definieer een type voor de vakgegevens met uren per week
+interface SubjectData {
+  subject: string
+  percentage: number
+  competencies: string
+  activities: number
+  distribution: number[]
+  studentBucket: number
+  status: string
+  hoursPerWeek: number // Toegevoegd veld voor uren per week
+}
 
 export default function Dashboard() {
   return (
@@ -63,6 +93,9 @@ function DashboardContent() {
 
   // State for tracking if student is above their average
   const [isAboveAverage, setIsAboveAverage] = useState(false)
+
+  // Voeg deze state toe in de DashboardContent functie, bij de andere useState declaraties
+  const [sortOption, setSortOption] = useState<SortOption>({ field: "activities", direction: "desc" })
 
   // Functie om het semesternummer te extraheren uit de activeSemester string
   const getSelectedSemesterNumber = (): 1 | 2 | 3 => {
@@ -131,6 +164,16 @@ function DashboardContent() {
       schoolYear: "School year",
       showMore: "Show more",
       showLess: "Show less",
+      good: "Good",
+      needsAttention: "Needs attention",
+      critical: "Critical",
+      // In het 'en' object binnen translations
+      sortBy: "Sort by",
+      score: "Score",
+      activities: "Activities",
+      hoursPerWeek: "Hours per week",
+      ascending: "Ascending",
+      descending: "Descending",
     },
     nl: {
       noStudentSelected: "Geen leerling geselecteerd",
@@ -184,6 +227,16 @@ function DashboardContent() {
       schoolYear: "Schooljaar",
       showMore: "Toon meer",
       showLess: "Toon minder",
+      good: "Goed",
+      needsAttention: "Aandacht nodig",
+      critical: "Kritisch",
+      // In het 'nl' object binnen translations
+      sortBy: "Sorteer op",
+      score: "Score",
+      activities: "Activiteiten",
+      hoursPerWeek: "Uren per week",
+      ascending: "Oplopend",
+      descending: "Aflopend",
     },
   }
 
@@ -291,12 +344,51 @@ function DashboardContent() {
     return getStudentAttendance(selectedStudent)
   }, [selectedStudent])
 
-  // Organize subject data by semester
+  // Voeg deze functie toe in de DashboardContent functie, voor de renderSemester functie
+  // Functie om uren per week te bepalen op basis van het vak
+  // In een echte implementatie zou dit uit de database komen
+  const getHoursPerWeek = (subject: string): number => {
+    // Vaste waarden voor de demo
+    const hoursMap: Record<string, number> = {
+      Wiskunde: 5,
+      Nederlands: 4,
+      Frans: 4,
+      Engels: 3,
+      "Levensbeschouwelijke vakken": 2,
+      Geschiedenis: 2,
+      "Lichamelijke opvoeding": 2,
+      Mechanica: 4,
+      Elektromagnetisme: 3,
+      Natuurwetenschappen: 3,
+      "Artistieke vorming": 2,
+      "Toegepaste informatica": 3,
+      Thermodynamica: 3,
+      "Project STEM": 4,
+    }
+
+    return hoursMap[subject] || Math.floor(Math.random() * 4) + 1 // Fallback naar random 1-4 uren
+  }
+
+  // Voeg deze functie toe in de DashboardContent functie, voor de renderSemester functie
+  // Functie om de sorteervolgorde te wijzigen
+  const handleSortChange = (field: "score" | "activities" | "hours") => {
+    setSortOption((prev) => {
+      // Als hetzelfde veld wordt geselecteerd, wissel dan de richting
+      if (prev.field === field) {
+        return { field, direction: prev.direction === "asc" ? "desc" : "asc" }
+      }
+      // Anders, nieuw veld met standaard aflopende sortering
+      return { field, direction: "desc" }
+    })
+  }
+
+  // Wijzig de semesterSubjects useMemo functie om hoursPerWeek toe te voegen
+  // Vervang de bestaande semesterSubjects useMemo functie met deze:
   const semesterSubjects = useMemo(() => {
     const result = {
-      1: [] as any[],
-      2: [] as any[],
-      3: [] as any[],
+      1: [] as SubjectData[],
+      2: [] as SubjectData[],
+      3: [] as SubjectData[],
     }
 
     studentData.forEach((statement) => {
@@ -313,6 +405,10 @@ function DashboardContent() {
           studentScore,
         )
 
+        // Genereer een consistente waarde voor uren per week op basis van het vak
+        // In een echte implementatie zou dit uit de database komen
+        const hoursPerWeek = getHoursPerWeek(subject)
+
         result[semester].push({
           subject: subject,
           percentage: studentScore,
@@ -321,6 +417,7 @@ function DashboardContent() {
           distribution: distribution,
           studentBucket: studentBucket,
           status: studentScore < 50 ? "danger" : studentScore < 70 ? "warning" : "success",
+          hoursPerWeek: hoursPerWeek,
         })
       }
     })
@@ -414,11 +511,50 @@ function DashboardContent() {
   // Haal de competentie-issues op
   const competencyIssues = getStudentCompetencyIssues(selectedStudent)
 
+  // Vervang de renderSemester functie met deze nieuwe versie
   // Render een semester with its subjects
   const renderSemester = (semesterNum: number, isActive: boolean) => {
     // Each subject shown here belongs to this specific semester
     // This relationship is defined in the database and cannot be changed
     const subjects = semesterSubjects[semesterNum]
+
+    // Sorteer de vakken op basis van de huidige sorteeroptie
+    const sortedSubjects = [...subjects].sort((a, b) => {
+      let comparison = 0
+
+      // Bepaal welk veld we vergelijken
+      switch (sortOption.field) {
+        case "score":
+          comparison = a.percentage - b.percentage
+          break
+        case "activities":
+          comparison = a.activities - b.activities
+          break
+        case "hours":
+          comparison = a.hoursPerWeek - b.hoursPerWeek
+          break
+      }
+
+      // Pas de sorteervolgorde toe
+      return sortOption.direction === "asc" ? comparison : -comparison
+    })
+
+    // Helper functie om het actieve sorteerveld te markeren
+    const getSortButtonClass = (field: "score" | "activities" | "hours") => {
+      return `px-2 py-1 text-xs rounded-md flex items-center gap-1 ${
+        sortOption.field === field
+          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium"
+          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+      }`
+    }
+
+    // Helper functie om het juiste icoon te tonen voor het sorteerveld
+    const getSortIcon = (field: "score" | "activities" | "hours") => {
+      if (sortOption.field !== field) {
+        return <ArrowUpDown className="h-3 w-3" />
+      }
+      return sortOption.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+    }
 
     return (
       <div
@@ -439,15 +575,74 @@ function DashboardContent() {
             </div>
           </div>
         )}
+
+        {/* Sorteer controls */}
+        <div className="mb-3 flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                <span>
+                  {t.sortBy}: {t[sortOption.field]}
+                </span>
+                <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 animate-in fade-in zoom-in-95 duration-200">
+              <DropdownMenuLabel>{t.sortBy}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="flex justify-between items-center" onClick={() => handleSortChange("score")}>
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  <span>{t.score}</span>
+                </div>
+                {sortOption.field === "score" &&
+                  (sortOption.direction === "asc" ? (
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  ))}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex justify-between items-center"
+                onClick={() => handleSortChange("activities")}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5" />
+                  <span>{t.activities}</span>
+                </div>
+                {sortOption.field === "activities" &&
+                  (sortOption.direction === "asc" ? (
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  ))}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex justify-between items-center" onClick={() => handleSortChange("hours")}>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{t.hoursPerWeek}</span>
+                </div>
+                {sortOption.field === "hours" &&
+                  (sortOption.direction === "asc" ? (
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  ))}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <div
           className={`grid grid-cols-1 md:grid-cols-2 gap-3 custom-scrollbar`}
           style={{
-            height: "100%",
+            height: "calc(100% - 30px)", // Verminder de hoogte om ruimte te maken voor de sorteercontrols
             overflowY: "auto", // Enable vertical scrolling
             paddingRight: "8px", // Add some padding for the scrollbar
           }}
         >
-          {subjects.map((subject, index) => (
+          {sortedSubjects.map((subject, index) => (
             <SubjectCard
               key={index}
               subject={subject.subject}
@@ -461,6 +656,7 @@ function DashboardContent() {
               compact={false}
               className="h-48" // Make cards taller
               semester={semesterNum} // Pass the semester number
+              hoursPerWeek={subject.hoursPerWeek} // Geef uren per week door
             />
           ))}
         </div>
@@ -539,6 +735,18 @@ function DashboardContent() {
   const [expandedAttentionPoints, setExpandedAttentionPoints] = useState(false)
   const [expandedStatus, setExpandedStatus] = useState(false)
 
+  // Helper functie om status indicator te tonen
+  const getStatusIndicator = (status: string, score: number) => {
+    switch (status) {
+      case "danger":
+        return <span className="font-medium text-red-600 dark:text-red-400">{score}%</span>
+      case "warning":
+        return <span className="font-medium text-amber-600 dark:text-amber-400">{score}%</span>
+      default:
+        return <span className="font-medium text-green-600 dark:text-green-400">{score}%</span>
+    }
+  }
+
   return (
     <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 py-2 px-4 flex items-center justify-between">
@@ -560,7 +768,7 @@ function DashboardContent() {
             </button>
 
             {showProfile && selectedStudent && (
-              <div className="absolute left-0 mt-2 w-[500px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
+              <div className="absolute left-0 mt-2 w-[500px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700 animate-in fade-in slide-in-from-top-5 duration-300">
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -637,7 +845,11 @@ function DashboardContent() {
                                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
                               </div>
                               <button
-                                className={`px-2 py-1 text-xs ${isSaving ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"} text-white rounded flex items-center gap-1`}
+                                className={`px-2 py-1 text-xs ${
+                                  isSaving
+                                    ? "bg-gray-400"
+                                    : "bg-gradient-to-r from-red-500 to-amber-500 hover:from-red-600 hover:to-amber-600"
+                                } text-white rounded flex items-center gap-1 shadow-sm transition-all duration-200`}
                                 disabled={isSaving}
                                 onClick={handleSaveAttendanceThreshold}
                               >
@@ -697,7 +909,11 @@ function DashboardContent() {
                                 <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
                               </div>
                               <button
-                                className={`px-2 py-1 text-xs ${isSavingGoal ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"} text-white rounded flex items-center gap-1`}
+                                className={`px-2 py-1 text-xs ${
+                                  isSavingGoal
+                                    ? "bg-gray-400"
+                                    : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                                } text-white rounded flex items-center gap-1 shadow-sm transition-all duration-200`}
                                 disabled={isSavingGoal}
                                 onClick={handleSaveIndividualGoal}
                               >
@@ -769,61 +985,63 @@ function DashboardContent() {
                           {/* Aanwezigheidspercentages */}
                           <div className="mt-2 space-y-2">
                             {/* Gewettigde afwezigheid */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1 text-xs">
-                                <CheckCircle2
-                                  className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-green-500" : "text-gray-400"}`}
-                                />
-                                <span className="dark:text-gray-300 font-medium">{t.authorized}:</span>
-                              </div>
-                              <div className="text-xs dark:text-gray-300">
-                                {hasAttendanceDetailData() ? (
-                                  <>
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1 text-xs">
+                                  <CheckCircle2
+                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-green-500" : "text-gray-400"}`}
+                                  />
+                                  <span className="dark:text-gray-300 font-medium">{t.authorized}:</span>
+                                </div>
+                                {hasAttendanceDetailData() && (
+                                  <div className="text-xs dark:text-gray-300">
                                     <span className="font-medium">{attendanceData.authorized}%</span>
                                     <span className="text-gray-500 dark:text-gray-400 ml-1">
                                       (~{Math.round(attendanceData.authorized * 0.36)}{" "}
                                       {attendanceData.authorized * 0.36 > 1 ? "dagen" : "dag"})
                                     </span>
-                                  </>
-                                ) : (
-                                  <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                              <div
-                                className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
-                                style={{ width: "0%" }}
-                              ></div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                <div
+                                  className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                  style={{ width: "0%" }}
+                                ></div>
+                              </div>
+                              {!hasAttendanceDetailData() && (
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                              )}
                             </div>
 
                             {/* Ongewettigde afwezigheid */}
-                            <div className="flex items-center justify-between mt-1">
-                              <div className="flex items-center gap-1 text-xs">
-                                <XCircle
-                                  className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-red-500" : "text-gray-400"}`}
-                                />
-                                <span className="dark:text-gray-300 font-medium">{t.unauthorized}:</span>
-                              </div>
-                              <div className="text-xs dark:text-gray-300">
-                                {hasAttendanceDetailData() ? (
-                                  <>
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1 text-xs">
+                                  <XCircle
+                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-red-500" : "text-gray-400"}`}
+                                  />
+                                  <span className="dark:text-gray-300 font-medium">{t.unauthorized}:</span>
+                                </div>
+                                {hasAttendanceDetailData() && (
+                                  <div className="text-xs dark:text-gray-300">
                                     <span className="font-medium">{attendanceData.unauthorized}%</span>
                                     <span className="text-gray-500 dark:text-gray-400 ml-1">
                                       (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
                                       {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
                                     </span>
-                                  </>
-                                ) : (
-                                  <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                  </div>
                                 )}
                               </div>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                              <div
-                                className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
-                                style={{ width: "0%" }}
-                              ></div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                <div
+                                  className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                  style={{ width: "0%" }}
+                                ></div>
+                              </div>
+                              {!hasAttendanceDetailData() && (
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                              )}
                             </div>
 
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -848,36 +1066,17 @@ function DashboardContent() {
                       {/* Main subjects section */}
                       <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
                         <h3 className="text-sm font-medium mb-2 dark:text-gray-200">{t.mainSubjects}</h3>
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {mainSubjects.map((subject) => (
-                            <div key={subject.subject}>
-                              <div className="flex justify-between text-xs mb-1">
+                            <div key={subject.subject} className="space-y-1">
+                              <div className="flex justify-between items-center text-xs mb-1">
                                 <span className="dark:text-gray-300">{subject.subject}</span>
                                 <div className="flex items-center gap-1">
-                                  <span
-                                    className={`font-medium ${
-                                      subject.status === "danger"
-                                        ? "text-red-500"
-                                        : subject.status === "warning"
-                                          ? "text-amber-500"
-                                          : "text-green-600"
-                                    }`}
-                                  >
-                                    {subject.score}%
-                                  </span>
+                                  {getStatusIndicator(subject.status, subject.score)}
                                   <span className="text-gray-500 dark:text-gray-400">({subject.competencies})</span>
                                 </div>
                               </div>
-                              <Progress
-                                value={subject.score}
-                                className={`h-2 ${
-                                  subject.status === "danger"
-                                    ? "bg-red-100 dark:bg-red-900/30"
-                                    : subject.status === "warning"
-                                      ? "bg-amber-100 dark:bg-amber-900/30"
-                                      : "bg-green-100 dark:bg-green-900/30"
-                                }`}
-                              />
+                              <Progress value={subject.score} className="h-2" />
                             </div>
                           ))}
                         </div>
@@ -905,7 +1104,7 @@ function DashboardContent() {
 
             {/* Vervang de notitie-popup sectie met deze verbeterde versie */}
             {showNotes && selectedStudent && (
-              <div className="absolute left-0 mt-2 w-[400px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
+              <div className="absolute left-0 mt-2 w-[400px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700 animate-in fade-in slide-in-from-top-5 duration-300">
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
@@ -956,64 +1155,66 @@ function DashboardContent() {
                             <p className="text-xs text-green-700 dark:text-green-400">{t.goodAttendance}.</p>
                             {/* Vervang ook de vergelijkbare sectie in de notitie-popup (rond regel 1000) door: */}
                             <div className="flex flex-col gap-2 mt-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
-                                  <CheckCircle2
-                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
-                                  />
-                                  <span className="font-medium">{t.authorized}:</span>
-                                </div>
-                                <div className="text-xs text-green-700 dark:text-green-400">
-                                  {hasAttendanceDetailData() ? (
-                                    <>
+                              <div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+                                    <CheckCircle2
+                                      className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
+                                    />
+                                    <span className="font-medium">{t.authorized}:</span>
+                                  </div>
+                                  {hasAttendanceDetailData() && (
+                                    <div className="text-xs text-green-700 dark:text-green-400">
                                       <span className="font-medium">{attendanceData.authorized}%</span>
                                       <span className="opacity-75 ml-1">
                                         (~{Math.round(attendanceData.authorized * 0.36)}{" "}
                                         {attendanceData.authorized * 0.36 > 1 ? "dagen" : "dag"})
                                       </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                    </div>
                                   )}
                                 </div>
-                              </div>
-                              <div className="w-full bg-green-200 dark:bg-green-900/30 rounded-full h-1.5">
-                                <div
-                                  className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
-                                  style={{
-                                    width: "0%",
-                                  }}
-                                ></div>
+                                <div className="w-full bg-green-200 dark:bg-green-900/30 rounded-full h-1.5">
+                                  <div
+                                    className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                    style={{
+                                      width: "0%",
+                                    }}
+                                  ></div>
+                                </div>
+                                {!hasAttendanceDetailData() && (
+                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                                )}
                               </div>
 
-                              <div className="flex items-center justify-between mt-1">
-                                <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
-                                  <XCircle
-                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
-                                  />
-                                  <span className="font-medium">{t.unauthorized}:</span>
-                                </div>
-                                <div className="text-xs text-green-700 dark:text-green-400">
-                                  {hasAttendanceDetailData() ? (
-                                    <>
+                              <div className="mt-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+                                    <XCircle
+                                      className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
+                                    />
+                                    <span className="font-medium">{t.unauthorized}:</span>
+                                  </div>
+                                  {hasAttendanceDetailData() && (
+                                    <div className="text-xs text-green-700 dark:text-green-400">
                                       <span className="font-medium">{attendanceData.unauthorized}%</span>
                                       <span className="opacity-75 ml-1">
                                         (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
                                         {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
                                       </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-gray-400 dark:text-gray-500">Geen data beschikbaar</span>
+                                    </div>
                                   )}
                                 </div>
-                              </div>
-                              <div className="w-full bg-green-200 dark:bg-green-900/30 rounded-full h-1.5">
-                                <div
-                                  className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
-                                  style={{
-                                    width: "0%",
-                                  }}
-                                ></div>
+                                <div className="w-full bg-green-200 dark:bg-green-900/30 rounded-full h-1.5">
+                                  <div
+                                    className="bg-gray-400 dark:bg-gray-600 h-1.5 rounded-full"
+                                    style={{
+                                      width: "0%",
+                                    }}
+                                  ></div>
+                                </div>
+                                {!hasAttendanceDetailData() && (
+                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                                )}
                               </div>
                             </div>
                           </div>

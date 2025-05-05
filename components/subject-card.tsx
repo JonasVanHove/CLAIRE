@@ -20,6 +20,7 @@ interface SubjectCardProps {
   isActive?: boolean
   className?: string
   semester?: number // Add semester parameter
+  hoursPerWeek?: number // Toegevoegd veld voor uren per week
 }
 
 export function SubjectCard({
@@ -34,6 +35,7 @@ export function SubjectCard({
   isActive = true,
   className = "",
   semester,
+  hoursPerWeek,
 }: SubjectCardProps) {
   const { hideNonCompleted, showCharts, showWarnings, language } = useUI()
   const modalRef = useRef<HTMLDivElement>(null)
@@ -209,8 +211,11 @@ export function SubjectCard({
       </Card>
 
       {isExpanded && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden" ref={modalRef}>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-5xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300"
+            ref={modalRef}
+          >
             {isLoading ? (
               <div className="bg-white dark:bg-gray-800 p-8 rounded-lg flex flex-col items-center justify-center">
                 <div className="relative w-24 h-24 mb-4">

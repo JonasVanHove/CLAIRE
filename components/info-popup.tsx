@@ -35,7 +35,7 @@ export function InfoPopup() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[500px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700">
+        <div className="absolute right-0 mt-2 w-[500px] bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700 animate-in fade-in slide-in-from-top-5 duration-300">
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">

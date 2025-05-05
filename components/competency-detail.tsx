@@ -501,7 +501,7 @@ export function CompetencyDetail({
 
                 {/* Activities list (expanded) */}
                 {expandedCompetencies.includes(competency.id) && competency.activities.length > 0 && (
-                  <div className="px-3 pb-3">
+                  <div className="px-3 pb-3 animate-in fade-in duration-200">
                     <div className="space-y-6">
                       {competency.activities.map((activity, activityIndex) => {
                         // Determine performance category

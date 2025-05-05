@@ -211,27 +211,27 @@ export function SettingsMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-100 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-300">
+        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-100 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-300 animate-in fade-in slide-in-from-top-5 duration-300">
           <div className="p-4 flex flex-col">
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-700 mb-3">{t.settings}</h3>
 
             <div className="space-y-4">
               {/* Hide Non-Completed Toggle - with consistent label and tooltip */}
-              <div className="flex items-center justify-between group relative">
+              <div className="flex items-center justify-between relative">
                 <div className="flex items-center gap-2">
                   {hideNonCompleted ? (
                     <EyeOff className="h-4 w-4 text-[#49454F]" />
                   ) : (
                     <Eye className="h-4 w-4 text-[#49454F]" />
                   )}
-                  <span className="text-sm text-gray-700 dark:text-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-700 group relative">
                     {language === "nl" ? "Verberg niet-geëvalueerde" : "Hide non-evaluated"}
+                    <div className="absolute left-0 -bottom-14 w-64 bg-black text-white text-xs p-2 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                      {language === "nl"
+                        ? "Verbergt activiteiten die nog niet zijn afgelegd of geëvalueerd. Deze tellen niet mee in het eindresultaat."
+                        : "Hides activities that are not yet completed or evaluated. These will not count towards the final result."}
+                    </div>
                   </span>
-                  <div className="absolute left-0 -bottom-14 w-64 bg-black text-white text-xs p-2 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                    {language === "nl"
-                      ? "Verbergt activiteiten die nog niet zijn afgelegd of geëvalueerd. Deze tellen niet mee in het eindresultaat."
-                      : "Hides activities that are not yet completed or evaluated. These will not count towards the final result."}
-                  </div>
                 </div>
                 <button
                   onClick={toggleHideNonCompleted}

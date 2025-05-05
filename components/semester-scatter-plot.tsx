@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import type React from "react"
+
+import { useEffect, useRef, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { useUI } from "@/contexts/ui-context"
 
@@ -17,6 +19,15 @@ interface ScatterPlotProps {
 export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { darkMode, language } = useUI()
+  const [tooltip, setTooltip] = useState<{ show: boolean; text: string; x: number; y: number }>({
+    show: false,
+    text: "",
+    x: 0,
+    y: 0,
+  })
+
+  // Store the current student dot position for hover detection
+  const currentStudentDotRef = useRef<{ x: number; y: number; radius: number; name: string } | null>(null)
 
   // Get the translated title based on the current language
   const getTranslatedTitle = () => {
@@ -92,6 +103,7 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
     // If no data or no selected student, draw empty chart with grid
     if (!data || data.length === 0 || !data.some((student) => student.isCurrentStudent)) {
       // Draw empty chart with grid only
+      currentStudentDotRef.current = null
       return
     }
 
@@ -120,6 +132,9 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
 
     // Find which bucket contains the current student
     const currentStudentBucket = buckets.findIndex((bucket) => bucket.some((student) => student.isCurrentStudent))
+
+    // Reset current student dot reference
+    currentStudentDotRef.current = null
 
     // Draw dots for each bucket
     buckets.forEach((bucket, bucketIndex) => {
@@ -158,9 +173,12 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
 
       // Draw non-current student dots first
       let currentStudentIndex = -1
+      let currentStudentName = ""
+
       bucket.forEach((student, index) => {
         if (student.isCurrentStudent) {
           currentStudentIndex = index
+          currentStudentName = student.name
           return // Skip current student for now
         }
 
@@ -184,24 +202,94 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
         // Calculate x position with even spacing
         const xPos = startX + currentStudentIndex * (dotSize * 2 + dotSpacing) + dotSize
 
-        // Draw the current student dot
+        // Create gradient for the current student dot
+        const gradient = ctx.createRadialGradient(xPos, y, 0, xPos, y, dotSize + 1.5)
+        gradient.addColorStop(0, "#60a5fa") // Lighter blue in center
+        gradient.addColorStop(1, "#2563eb") // Darker blue at edges
+
+        // Draw the current student dot with gradient
         ctx.beginPath()
         ctx.arc(xPos, y, dotSize + 1.5, 0, Math.PI * 2)
-        ctx.fillStyle = "#3b82f6" // Change to blue color
+        ctx.fillStyle = gradient
         ctx.fill()
 
         // Add a border to make it stand out more
         ctx.strokeStyle = darkMode ? "#333333" : "#ffffff"
         ctx.lineWidth = 1.5
         ctx.stroke()
+
+        // Store the current student dot position for hover detection
+        currentStudentDotRef.current = {
+          x: xPos,
+          y: y,
+          radius: dotSize + 1.5,
+          name: currentStudentName,
+        }
       }
     })
   }, [data, darkMode])
 
+  // Handle mouse move for tooltip
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current || !currentStudentDotRef.current) {
+      setTooltip({ show: false, text: "", x: 0, y: 0 })
+      return
+    }
+
+    const rect = canvasRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    // Calculate distance from mouse to dot center
+    const dx = x - currentStudentDotRef.current.x
+    const dy = y - currentStudentDotRef.current.y
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    // Show tooltip if mouse is over the dot
+    if (distance <= currentStudentDotRef.current.radius) {
+      setTooltip({
+        show: true,
+        text: currentStudentDotRef.current.name,
+        x: e.clientX,
+        y: e.clientY,
+      })
+    } else {
+      setTooltip({ show: false, text: "", x: 0, y: 0 })
+    }
+  }
+
+  // Handle mouse leave
+  const handleMouseLeave = () => {
+    setTooltip({ show: false, text: "", x: 0, y: 0 })
+  }
+
   return (
-    <Card className="p-2 dark:bg-gray-800 dark:border-gray-700">
-      <div className="text-xs font-medium mb-1 dark:text-gray-200 text-center">{getTranslatedTitle()}</div>
-      <canvas ref={canvasRef} width={240} height={120} className="w-full h-auto max-w-full mx-auto" />
+    <Card className="flex p-2 dark:bg-gray-800 dark:border-gray-700 relative">
+      <div className="flex items-center justify-center mr-2 min-w-[20px]">
+        <div className="text-xs font-semibold tracking-wide dark:text-gray-100 text-gray-700 transform -rotate-90 whitespace-nowrap origin-center py-2">
+          {getTranslatedTitle()}
+        </div>
+      </div>
+      <canvas
+        ref={canvasRef}
+        width={240}
+        height={120}
+        className="flex-1 h-auto max-w-full"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      />
+      {tooltip.show && (
+        <div
+          className="absolute z-10 px-2 py-1 text-xs font-medium text-white bg-gray-800 rounded shadow-lg pointer-events-none animate-in fade-in duration-200"
+          style={{
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y - 30}px`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </Card>
   )
 }
