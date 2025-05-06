@@ -106,3 +106,30 @@ User → Component → API Service → Mock Data → Component → User
 \`\`\`
 StudentContext → Components → API Service → StudentContext
 UIContext → Components → UIContext
+\`\`\`
+
+## Risk Rules
+
+The dashboard implements consistent risk rules to identify students who need attention:
+
+### At Risk
+A student is considered "at risk" when their competency achievement percentage (achieved competencies divided by total competencies) is below their individual goal threshold.
+
+\`\`\`typescript
+// Student is at risk if:
+percentage < individualGoal
+\`\`\`
+
+This is visually indicated with an amber warning triangle icon (🔺).
+
+### Attendance Risk
+A student is considered to have "attendance risk" when their attendance percentage is below the attendance threshold.
+
+\`\`\`typescript
+// Student has attendance risk if:
+attendancePercentage < attendanceThreshold
+\`\`\`
+
+This is visually indicated with a blue clock icon (🕒).
+
+These rules are consistently applied throughout the dashboard to ensure clear communication of student status.

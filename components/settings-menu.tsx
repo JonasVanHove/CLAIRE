@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useUI } from "@/contexts/ui-context"
-import { Sun, Moon, Eye, EyeOff, Settings, LayoutGrid, LayoutList, Globe } from "lucide-react"
+import { Sun, Moon, Eye, EyeOff, Settings, LayoutGrid, LayoutList, Globe, Sliders } from "lucide-react"
+import { GlobalParametersModal } from "@/components/global-parameters-modal"
 
 // Add a global array to store click logs
 const clickLogs: Array<{
@@ -41,6 +42,7 @@ const trackClick = (e: MouseEvent) => {
 // Update the SettingsMenu component
 export function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false)
+  const [showGlobalParams, setShowGlobalParams] = useState(false)
   const {
     darkMode,
     toggleDarkMode,
@@ -89,6 +91,8 @@ export function SettingsMenu() {
       compactView: "Compact view",
       standardView: "Standard view",
       language: "Language",
+      globalParameters: "Global parameters",
+      globalParametersDesc: "Set risk thresholds for all students or by class",
     },
     nl: {
       settings: "Instellingen",
@@ -99,6 +103,8 @@ export function SettingsMenu() {
       compactView: "Compacte weergave",
       standardView: "Standaard weergave",
       language: "Taal",
+      globalParameters: "Globale parameters",
+      globalParametersDesc: "Stel risicodrempels in voor alle leerlingen of per klas",
     },
   }
 
@@ -216,6 +222,21 @@ export function SettingsMenu() {
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-700 mb-3">{t.settings}</h3>
 
             <div className="space-y-4">
+              {/* Global Parameters Option */}
+              <div
+                className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-800/30 hover:bg-blue-100 dark:hover:bg-blue-800/20 transition-colors cursor-pointer"
+                onClick={() => {
+                  setShowGlobalParams(true)
+                  setIsOpen(false)
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Sliders className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{t.globalParameters}</span>
+                </div>
+                <p className="text-xs text-blue-600 dark:text-blue-300">{t.globalParametersDesc}</p>
+              </div>
+
               {/* Hide Non-Completed Toggle - with consistent label and tooltip */}
               <div className="flex items-center justify-between relative">
                 <div className="flex items-center gap-2">
@@ -360,6 +381,9 @@ export function SettingsMenu() {
           </div>
         </div>
       )}
+
+      {/* Global Parameters Modal */}
+      {showGlobalParams && <GlobalParametersModal onClose={() => setShowGlobalParams(false)} language={language} />}
     </div>
   )
 }

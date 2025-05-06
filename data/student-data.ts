@@ -360,6 +360,253 @@ const studentsByClass = {
   ],
 }
 
+// Helper functions
+export const getStudentData = (studentName: string) => {
+  return studentData.filter((statement) => statement.actor.name === studentName)
+}
+
+export const getStudentSubjectData = (studentName: string) => {
+  return studentData.filter((statement) => statement.actor.name === studentName)
+}
+
+export const getClassData = (className: string) => {
+  return studentData.filter((statement) => statement.actor.class === className)
+}
+
+export const getStudentSemesterData = (studentName: string, semester: 1 | 2 | 3) => {
+  return studentData.filter(
+    (statement) => statement.actor.name === studentName && statement.object.definition.semester === semester,
+  )
+}
+
+export const getStudentsInClass = (className: string) => {
+  const uniqueStudents = new Set<string>()
+  studentData.forEach((statement) => {
+    if (statement.actor.class === className) {
+      uniqueStudents.add(statement.actor.name)
+    }
+  })
+  return Array.from(uniqueStudents)
+}
+
+export const getClassScoresForSemester = (className: string, semester: 1 | 2 | 3) => {
+  const statements = studentData.filter((s) => s.actor.class === className && s.object.definition.semester === semester)
+
+  // Group by student and calculate average score
+  const studentScores = new Map<string, number[]>()
+
+  statements.forEach((statement) => {
+    const studentName = statement.actor.name
+    const score = statement.result.score.raw
+
+    if (!studentScores.has(studentName)) {
+      studentScores.set(studentName, [])
+    }
+
+    studentScores.get(studentName)?.push(score)
+  })
+
+  // Calculate average score for each student
+  return Array.from(studentScores.entries()).map(([name, scores]) => {
+    const avgScore = Number.parseFloat((scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2))
+    return {
+      name,
+      score: avgScore,
+      isCurrentStudent: false, // This will be set by the component
+    }
+  })
+}
+
+export const getTotalCompetencies = (studentName: string) => {
+  const statements = getStudentData(studentName)
+
+  let achieved = 0
+  let total = 0
+
+  statements.forEach((statement) => {
+    if (statement.result.competencies) {
+      achieved += statement.result.competencies.achieved
+      total += statement.result.competencies.total
+    }
+  })
+
+  return { achieved, total }
+}
+
+export const getStudentProfileImage = (studentName: string) => {
+  const statement = studentData.find((s) => s.actor.name === studentName)
+  return statement?.actor.profileImage || "/profile_placeholder.png"
+}
+
+// Helper function to check if a student is 'at risk' based on competency achievement
+export const isStudentAtRisk = (studentName: string): boolean => {
+  // Get the student's competency percentage
+  const { achieved, total } = getTotalCompetencies(studentName)
+  const percentage = (achieved / total) * 100
+
+  // Get the student's individual goal
+  const individualGoal = getStudentIndividualGoal(studentName)
+
+  // Student is at risk if their competency achievement is below their individual goal
+  return percentage < individualGoal
+}
+
+export const getAtRiskReason = (studentName: string, language = "nl"): string => {
+  // Get the student's competency percentage
+  const { achieved, total } = getTotalCompetencies(studentName)
+  const percentage = (achieved / total) * 100
+
+  // Get the student's individual goal
+  const individualGoal = getStudentIndividualGoal(studentName)
+
+  // Return a consistent reason based on the rule
+  if (language === "en") {
+    return `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
+  } else {
+    return `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`
+  }
+}
+
+// Helper function to check if a student has attendance risk
+export const hasAttendanceRisk = (studentName: string, threshold = 85): boolean => {
+  const attendance = getStudentAttendance(studentName)
+  return attendance.present < threshold
+}
+
+// Helper function to get attendance risk reason
+export const getAttendanceRiskReason = (studentName: string, threshold = 85, language = "nl"): string => {
+  const attendance = getStudentAttendance(studentName)
+
+  if (language === "en") {
+    return `Attendance (${attendance.present}%) is below threshold (${threshold}%)`
+  } else {
+    return `Aanwezigheid (${attendance.present}%) is onder de grenswaarde (${threshold}%)`
+  }
+}
+
+// Add this function to check if a student has low attendance
+export const hasLowAttendance = (studentName: string, threshold = 85) => {
+  const attendance = getStudentAttendance(studentName)
+  return attendance.present < threshold
+}
+
+// Add this function to get consistent individual goal data for a student
+export const getStudentIndividualGoal = (studentName: string) => {
+  // In a real implementation, this would fetch from the database
+  // For now, we'll generate consistent data based on the student name
+
+  // Use the student name to generate a consistent hash
+  let hash = 0
+  for (let i = 0; i < studentName.length; i++) {
+    hash = (hash << 5) - hash + studentName.charCodeAt(i)
+    hash |= 0 // Convert to 32bit integer
+  }
+
+  // Use the hash to generate a consistent goal value
+  const seed = Math.abs(hash) / 100000000
+
+  // Generate goal between 65% and 90%
+  return Math.floor(65 + ((seed * 25) % 26))
+}
+
+// Update the getStudentActivitiesForSubject function to properly filter activities by subject
+export const getStudentActivitiesForSubject = (studentName: string, subject: string) => {
+  // Get the competencies for this subject
+  const competencies = generateMockCompetencies(subject)
+
+  // Return all activities from all competencies, ensuring they belong to this subject
+  const allActivities = competencies.flatMap((comp) => comp.activities.filter((act) => act.subjectId === subject))
+
+  // Sort activities by date (newest first)
+  return allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+}
+
+// Function to get student competencies across all subjects
+export const getStudentCompetencies = (studentName: string) => {
+  // In a real implementation, this would fetch from the database
+  // For now, we'll generate a map of competencies by global ID
+
+  const competencyMap = new Map<string, Competency>()
+
+  // For each subject, get competencies and add them to the map if not already present
+  SUBJECTS.forEach((subject) => {
+    const competencies = generateMockCompetencies(subject)
+
+    competencies.forEach((comp) => {
+      if (!competencyMap.has(comp.globalId)) {
+        competencyMap.set(comp.globalId, comp)
+      }
+    })
+  })
+
+  return Array.from(competencyMap.values())
+}
+
+// Mock function to generate student attendance data
+export const getStudentAttendance = (studentName: string) => {
+  // In a real implementation, this would fetch from the database
+  // For now, we'll generate consistent data based on the student name
+
+  // Use the student name to generate a consistent hash
+  let hash = 0
+  for (let i = 0; i < studentName.length; i++) {
+    hash = (hash << 5) - hash + studentName.charCodeAt(i)
+    hash |= 0 // Convert to 32bit integer
+  }
+
+  // Use the hash to generate a consistent attendance value
+  const seed = Math.abs(hash) / 100000000
+
+  // Generate attendance between 80% and 100%
+  const present = Math.floor(80 + ((seed * 20) % 21))
+  const late = Math.floor((seed * 10) % 11)
+
+  return { present, late }
+}
+
+// Mock function to generate competencies for a subject
+const generateMockCompetencies = (subject: string): Competency[] => {
+  const competencies: Competency[] = []
+
+  // Generate 5 competencies per subject
+  for (let i = 1; i <= 5; i++) {
+    const competencyId = `COMP-${subject.slice(0, 3).toUpperCase()}-${i}`
+    const globalId = `COMP-00${i}` // Use a global ID for cross-subject linking
+
+    // Determine status based on random chance
+    const statusOptions: ("not-achieved" | "partially-achieved" | "achieved")[] = [
+      "not-achieved",
+      "partially-achieved",
+      "achieved",
+    ]
+    const status = statusOptions[Math.floor(Math.random() * statusOptions.length)]
+
+    // Generate class distribution
+    const notAchieved = Math.floor(Math.random() * 30)
+    const partiallyAchieved = Math.floor(Math.random() * (70 - notAchieved))
+    const achieved = 100 - notAchieved - partiallyAchieved
+
+    // Generate activities for this competency
+    const activities = generateActivities(competencyId, subject)
+
+    competencies.push({
+      id: competencyId,
+      globalId: globalId,
+      title: `Competentie ${i} voor ${subject}`,
+      status: status,
+      classDistribution: {
+        notAchieved,
+        partiallyAchieved,
+        achieved,
+      },
+      activities: activities,
+      subjects: [subject], // Indicate the subject this competency is relevant for
+    })
+  }
+
+  return competencies
+}
+
 // Update the generateActivities function to limit activities to 3-6 per subject per semester
 // and ensure exactly 1 exam per subject per semester for main subjects
 const generateActivities = (competencyId: string, subject: string, studentName = ""): Activity[] => {
@@ -897,404 +1144,32 @@ const globalCompetencies: { id: string; title: string; subjects: string[] }[] = 
 ]
 
 // Helper functions
-export const getStudentData = (studentName: string) => {
-  return studentData.filter((statement) => statement.actor.name === studentName)
-}
-
-export const getStudentSubjectData = (studentName: string) => {
-  return studentData.filter((statement) => statement.actor.name === studentName)
-}
-
-export const getClassData = (className: string) => {
-  return studentData.filter((statement) => statement.actor.class === className)
-}
-
-export const getStudentSemesterData = (studentName: string, semester: 1 | 2 | 3) => {
-  return studentData.filter(
-    (statement) => statement.actor.name === studentName && statement.object.definition.semester === semester,
-  )
-}
-
-export const getStudentsInClass = (className: string) => {
-  const uniqueStudents = new Set<string>()
-  studentData.forEach((statement) => {
-    if (statement.actor.class === className) {
-      uniqueStudents.add(statement.actor.name)
-    }
-  })
-  return Array.from(uniqueStudents)
-}
-
-export const getClassScoresForSemester = (className: string, semester: 1 | 2 | 3) => {
-  const statements = studentData.filter((s) => s.actor.class === className && s.object.definition.semester === semester)
-
-  // Group by student and calculate average score
-  const studentScores = new Map<string, number[]>()
-
-  statements.forEach((statement) => {
-    const studentName = statement.actor.name
-    const score = statement.result.score.raw
-
-    if (!studentScores.has(studentName)) {
-      studentScores.set(studentName, [])
-    }
-
-    studentScores.get(studentName)?.push(score)
-  })
-
-  // Calculate average score for each student
-  return Array.from(studentScores.entries()).map(([name, scores]) => {
-    const avgScore = Number.parseFloat((scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2))
-    return {
-      name,
-      score: avgScore,
-      isCurrentStudent: false, // This will be set by the component
-    }
-  })
-}
-
-export const getTotalCompetencies = (studentName: string) => {
-  const statements = getStudentData(studentName)
-
-  let achieved = 0
-  let total = 0
-
-  statements.forEach((statement) => {
-    if (statement.result.competencies) {
-      achieved += statement.result.competencies.achieved
-      total += statement.result.competencies.total
-    }
-  })
-
-  return { achieved, total }
-}
-
-export const getStudentProfileImage = (studentName: string) => {
-  const statement = studentData.find((s) => s.actor.name === studentName)
-  return statement?.actor.profileImage || "/profile_placeholder.png"
-}
-
-// Voeg een nieuwe helper functie toe om te controleren of een student 'at risk' is
-export const isStudentAtRisk = (studentName: string): boolean => {
-  const statement = studentData.find((s) => s.actor.name === studentName)
-  return statement?.actor.atRisk || false
-}
-
-export const getAtRiskReason = (studentName: string): string | null => {
-  // Controleer eerst of de student at risk is
-  if (!isStudentAtRisk(studentName)) {
-    return null
-  }
-
-  // Zoek de student in de data
-  const studentStatement = studentData.find((s) => s.actor.name === studentName)
-  if (!studentStatement) return null
-
-  // Haal de gefaalde vakken op
-  const failedSubjects = (studentStatement.actor as any).failedSubjects || []
-  if (failedSubjects.length > 0) {
-    return `Onvoldoende voor ${failedSubjects.join(", ")}`
-  }
-
-  // Haal de vakken met lage prestaties op
-  const lowPerformanceSubjects = (studentStatement.actor as any).lowPerformanceSubjects || []
-  if (lowPerformanceSubjects.length > 0) {
-    // Toon maximaal 3 vakken om de lijst niet te lang te maken
-    const subjectsToShow = lowPerformanceSubjects.slice(0, 3)
-
-    const remainingCount = lowPerformanceSubjects.length - 3
-
-    let reason = `Lage prestatie voor ${subjectsToShow.join(", ")}`
-    if (remainingCount > 0) {
-      reason += ` en ${remainingCount} andere vakken`
-    }
-    return reason
-  }
-
-  // Controleer voor globale prestatie
-  const allData = getStudentData(studentName)
-  let totalScore = 0
-  let totalSubjects = 0
-
-  allData.forEach((statement) => {
-    totalScore += statement.result.score.raw
-    totalSubjects++
-  })
-
-  if (totalSubjects > 0) {
-    const avgScore = totalScore / totalSubjects
-    if (avgScore < 60) {
-      return `Globale prestatie onder verwacht niveau (${avgScore.toFixed(1)}%)`
-    }
-  }
-
-  // Standaard reden
-  return "Prestatie onder verwacht niveau"
-}
-
-// Functie om de competenties te krijgen waar een student moeite mee heeft
-export const getStudentCompetencyIssues = (studentName: string): string[] => {
-  const studentData = getStudentData(studentName)
-  const issues: string[] = []
-
-  studentData.forEach((statement) => {
-    const subject = statement.object.definition.name.nl
-    const competencies = statement.result.competencies
-
-    if (competencies) {
-      const achievedPercentage = (competencies.achieved / competencies.total) * 100
-      if (achievedPercentage < 60) {
-        issues.push(
-          `${subject}: ${competencies.achieved}/${competencies.total} competenties behaald (${achievedPercentage.toFixed(1)}%)`,
-        )
-      }
-    }
-  })
-
-  return issues
-}
-
-// Functie om mock competenties te genereren voor een vak
-export const generateMockCompetencies = (subject: string): Competency[] => {
-  const totalCompetencies = Math.floor(Math.random() * 10) + 10 // 10-20 competenties
-
-  // Define subject-specific competency titles
-  const subjectCompetencyTitles: Record<string, string[]> = {
-    Wiskunde: [
-      "De leerlingen passen wiskundige technieken toe in fysische en technologische contexten.",
-      "De leerlingen maken en interpreteren tabellen en grafieken in diverse situaties.",
-      "De leerlingen werken met functies en grafieken om relaties te analyseren.",
-      "De leerlingen berekenen kansen in eenvoudige probabilistische situaties.",
-      "De leerlingen gebruiken statistische technieken om gegevens te verwerken en te interpreteren.",
-      "De leerlingen lossen wiskundige problemen op door logisch redeneren en deductie.",
-      "De leerlingen interpreteren en gebruiken formules en vergelijkingen in toepassingsproblemen.",
-      "De leerlingen analyseren patronen en verbanden in numerieke en algebraïsche gegevens.",
-      "De leerlingen berekenen oppervlaktes, volumes en omtrekken van geometrische figuren.",
-      "De leerlingen lossen vergelijkingen en ongelijkheden op met één of meer onbekenden.",
-      "De leerlingen passen basisrekenvaardighedentoe in complexe contexten.",
-      "De leerlingen gebruiken meetkundige principes om ruimtelijke problemen op te lossen.",
-    ],
-    Nederlands: [
-      "De leerlingen analyseren en interpreteren literaire teksten uit verschillende periodes.",
-      "De leerlingen schrijven coherente en gestructureerde teksten voor verschillende doeleinden.",
-      "De leerlingen passen grammaticale regels correct toe in geschreven en gesproken taal.",
-      "De leerlingen houden effectieve mondelinge presentaties over diverse onderwerpen.",
-      "De leerlingen begrijpen en analyseren complexe teksten uit verschillende bronnen.",
-      "De leerlingen nemen actief deel aan debatten en discussies over maatschappelijke thema's.",
-      "De leerlingen gebruiken een gevarieerde woordenschat in verschillende communicatieve contexten.",
-      "De leerlingen reflecteren kritisch op taalgebruik in media en literatuur.",
-    ],
-    Frans: [
-      "De leerlingen begrijpen gesproken Frans in verschillende contexten en accenten.",
-      "De leerlingen voeren gesprekken in het Frans over alledaagse en academische onderwerpen.",
-      "De leerlingen schrijven coherente teksten in het Frans voor verschillende doeleinden.",
-      "De leerlingen passen grammaticale regels correct toe in geschreven en gesproken Frans.",
-      "De leerlingen begrijpen en analyseren Franstalige literaire teksten en media.",
-      "De leerlingen gebruiken een gevarieerde woordenschat in verschillende communicatieve contexten.",
-      "De leerlingen tonen inzicht in de Franstalige cultuur en samenleving.",
-      "De leerlingen vertalen teksten accuraat tussen Frans en Nederlands.",
-    ],
-    Engels: [
-      "De leerlingen begrijpen gesproken Engels in verschillende contexten en accenten.",
-      "De leerlingen voeren gesprekken in het Engels over alledaagse en academische onderwerpen.",
-      "De leerlingen schrijven coherente teksten in het Engels voor verschillende doeleinden.",
-      "De leerlingen passen grammaticale regels correct toe in geschreven en gesproken Engels.",
-      "De leerlingen begrijpen en analyseren Engelstalige literaire teksten en media.",
-      "De leerlingen gebruiken een gevarieerde woordenschat in verschillende communicatieve contexten.",
-      "De leerlingen tonen inzicht in de Engelstalige cultuur en samenleving.",
-      "De leerlingen vertalen teksten accuraat tussen Engels en Nederlands.",
-    ],
-    Mechanica: [
-      "De leerlingen passen de wetten van Newton toe op mechanische systemen.",
-      "De leerlingen analyseren krachten en momenten in statische systemen.",
-      "De leerlingen berekenen arbeid, energie en vermogen in mechanische systemen.",
-      "De leerlingen analyseren beweging in één en twee dimensies.",
-      "De leerlingen begrijpen en passen de wetten van behoud van energie en impuls toe.",
-      "De leerlingen analyseren roterende systemen en berekenen traagheidsmomenten.",
-      "De leerlingen modelleren en analyseren trillingen en golven.",
-      "De leerlingen passen mechanische principes toe in praktische contexten.",
-    ],
-    Elektromagnetisme: [
-      "De leerlingen analyseren elektrische velden en berekenen elektrische krachten.",
-      "De leerlingen ontwerpen en analyseren elektrische circuits met verschillende componenten.",
-      "De leerlingen begrijpen en passen de wetten van Ohm en Kirchhoff toe.",
-      "De leerlingen analyseren magnetische velden en berekenen magnetische krachten.",
-      "De leerlingen begrijpen elektromagnetische inductie en passen de wet van Faraday toe.",
-      "De leerlingen analyseren elektromagnetische golven en hun eigenschappen.",
-      "De leerlingen begrijpen de werking van elektrische machines en transformatoren.",
-      "De leerlingen passen elektromagnetische principes toe in praktische contexten.",
-    ],
-  }
-
-  // Get subject-specific titles if available
-  const specificTitles = subjectCompetencyTitles[subject] || [
-    "De leerlingen passen wiskundige technieken toe in fysische en technologische contexten.",
-    "De leerlingen maken en interpreteren tabellen en grafieken in diverse situaties.",
-    "De leerlingen werken met functies en grafieken om relaties te analyseren.",
-    "De leerlingen berekenen kansen in eenvoudige probabilistische situaties.",
-    "De leerlingen gebruiken statistische technieken om gegevens te verwerken en te interpreteren.",
-    "De leerlingen lossen wiskundige problemen op door logisch redeneren en deductie.",
-    "De leerlingen interpreteren en gebruiken formules en vergelijkingen in toepassingsproblemen.",
-    "De leerlingen analyseren patronen en verbanden in numerieke en algebraïsche gegevens.",
-    "De leerlingen berekenen oppervlaktes, volumes en omtrekken van geometrische figuren.",
-    "De leerlingen lossen vergelijkingen en ongelijkheden op met één of meer onbekenden.",
-    "De leerlingen passen basisrekenvaardighedentoe in complexe contexten.",
-    "De leerlingen gebruiken meetkundige principes om ruimtelijke problemen op te lossen.",
-  ]
-
-  // Find global competencies that apply to this subject
-  const applicableGlobalCompetencies = globalCompetencies.filter((comp) => comp.subjects.includes(subject))
-
-  // Create a mix of subject-specific and global competencies
-  const competencies: Competency[] = []
-
-  // First add some global competencies
-  applicableGlobalCompetencies.forEach((globalComp, index) => {
-    if (index < 3 || Math.random() < 0.3) {
-      // Limit to first 3 plus some random ones
-      // Genereer een willekeurige status met meer kans op "achieved"
-      const statusRandom = Math.random()
-      let status: "not-achieved" | "partially-achieved" | "achieved"
-
-      if (statusRandom < 0.2) {
-        status = "not-achieved"
-      } else if (statusRandom < 0.4) {
-        status = "partially-achieved"
-      } else {
-        status = "achieved"
-      }
-
-      // Genereer willekeurige klasverdeling
-      const total = 100
-      const achieved = Math.floor(Math.random() * 60) + 20 // 20-80%
-      const partiallyAchieved = Math.floor((Math.random() * (100 - achieved)) / 2)
-      const notAchieved = total - achieved - partiallyAchieved
-
-      // Genereer een competentie ID
-      const id = `${globalComp.id}-${subject.substring(0, 3).toUpperCase()}`
-
-      // Soms een notitie toevoegen
-      const hasNote = Math.random() < 0.3
-      const notes = hasNote
-        ? [
-            "Leerling heeft moeite met het concept, extra oefening nodig.",
-            "Goede vooruitgang, maar nog wat meer oefening nodig.",
-            "Leerling heeft hulp nodig bij het toepassen in complexe situaties.",
-            "Concept is begrepen, maar toepassing in nieuwe contexten is nog moeilijk.",
-            "Extra uitdaging nodig, leerling beheerst dit concept volledig.",
-          ][Math.floor(Math.random() * 5)]
-        : undefined
-
-      // Genereer activiteiten voor deze competentie
-      const activities = generateActivities(id, subject, "3STEM") || []
-
-      competencies.push({
-        id,
-        title: globalComp.title,
-        subject,
-        status,
-        classDistribution: {
-          notAchieved,
-          partiallyAchieved,
-          achieved,
-        },
-        activities,
-        notes,
-        globalId: globalComp.id,
-        subjects: globalComp.subjects,
-      })
-    }
-  })
-
-  // Then add subject-specific competencies
-  const remainingCount = totalCompetencies - competencies.length
-
-  for (let i = 0; i < remainingCount; i++) {
-    // Genereer een willekeurige status met meer kans op "achieved"
-    const statusRandom = Math.random()
-    let status: "not-achieved" | "partially-achieved" | "achieved"
-
-    if (statusRandom < 0.2) {
-      status = "not-achieved"
-    } else if (statusRandom < 0.4) {
-      status = "partially-achieved"
-    } else {
-      status = "achieved"
-    }
-
-    // Genereer willekeurige klasverdeling
-    const total = 100
-    const achieved = Math.floor(Math.random() * 60) + 20 // 20-80%
-    const partiallyAchieved = Math.floor((Math.random() * (100 - achieved)) / 2)
-    const notAchieved = total - achieved - partiallyAchieved
-
-    // Genereer een competentie ID en titel
-    const id = `${(i + 1).toString().padStart(2, "0")}.${Math.floor(Math.random() * 12) + 1}`
-
-    // Use subject-specific titles if available
-    const title = specificTitles[i % specificTitles.length]
-
-    // Soms een notitie toevoegen
-    const hasNote = Math.random() < 0.3
-    const notes = hasNote
-      ? [
-          "Leerling heeft moeite met het concept, extra oefening nodig.",
-          "Goede vooruitgang, maar nog wat meer oefening nodig.",
-          "Leerling heeft hulp nodig bij het toepassen in complexe situaties.",
-          "Concept is begrepen, maar toepassing in nieuwe contexten is nog moeilijk.",
-          "Extra uitdaging nodig, leerling beheerst dit concept volledig.",
-        ][Math.floor(Math.random() * 5)]
-      : undefined
-
-    // Genereer activiteiten voor deze competentie
-    const activities = generateActivities(id, subject, "3STEM") || []
-
-    competencies.push({
-      id,
-      title,
-      status,
-      classDistribution: {
-        notAchieved,
-        partiallyAchieved,
-        achieved,
-      },
-      activities,
-      notes,
-      globalId: `SUBJ-${subject.substring(0, 3).toUpperCase()}-${i}`,
-      subjects: [subject],
-    })
-  }
-
-  return competencies
-}
-
-// Functie om klasverdeling te genereren voor een vak
 export const getClassDistributionForSubject = (
   className: string,
   subject: string,
-  semester: number,
+  semester: 1 | 2 | 3,
   studentScore: number,
 ) => {
-  // Haal alle scores op voor dit vak in deze klas en semester
-  const classStatements = studentData.filter(
-    (s) =>
-      s.actor.class === className &&
-      s.object.definition.name.nl === subject &&
-      s.object.definition.semester === semester,
-  )
+  // Get all student scores for this class, subject, and semester
+  const scores = getClassData(className)
+    .filter((s) => s.object.definition.name.nl === subject && s.object.definition.semester === semester)
+    .map((s) => s.result.score.raw)
 
-  // Maak een array van 20 buckets (0-5%, 5-10%, etc.)
-  const distribution = Array(20).fill(0)
+  // Create buckets for each 5% range
+  const bucketSize = 5
+  const numBuckets = 100 / bucketSize
+  const distribution = Array(numBuckets).fill(0)
 
-  // Vul de distributie met de scores van alle studenten
-  classStatements.forEach((statement) => {
-    const score = statement.result.score.raw
-    const bucket = Math.min(Math.floor(score / 5), 19) // 0-19 voor 20 buckets
-    distribution[bucket]++
+  // Count the number of students in each bucket
+  scores.forEach((score) => {
+    const bucketIndex = Math.floor(score / bucketSize)
+    if (bucketIndex >= 0 && bucketIndex < numBuckets) {
+      distribution[bucketIndex]++
+    }
   })
 
-  // Bepaal in welke bucket de student valt
-  const studentBucket = Math.min(Math.floor(studentScore / 5), 19)
+  // Determine which bucket the student falls into
+  const studentBucket = Math.floor(studentScore / bucketSize)
 
   return {
     distribution,
@@ -1302,10 +1177,11 @@ export const getClassDistributionForSubject = (
   }
 }
 
-// Add this function to get consistent attendance data for a student
-export const getStudentAttendance = (studentName: string) => {
+export const getStudentCompetencyIssues = (studentName: string): string[] => {
   // In a real implementation, this would fetch from the database
   // For now, we'll generate consistent data based on the student name
+
+  const issues: string[] = []
 
   // Use the student name to generate a consistent hash
   let hash = 0
@@ -1314,76 +1190,33 @@ export const getStudentAttendance = (studentName: string) => {
     hash |= 0 // Convert to 32bit integer
   }
 
-  // Use the hash to generate consistent attendance values
+  // Use the hash to generate consistent issues
   const seed = Math.abs(hash) / 100000000
 
-  // Generate attendance between 70% and 98%
-  const present = Math.floor(70 + ((seed * 28) % 29))
-  const absent = 100 - present
-  const authorized = Math.floor(absent * (0.5 + seed * 0.5))
-  const unauthorized = absent - authorized
+  // Generate a random number of issues (0-3)
+  const numIssues = Math.floor((seed * 4) % 4)
 
-  return {
-    present,
-    authorized,
-    unauthorized,
+  // Generate consistent issue messages
+  for (let i = 0; i < numIssues; i++) {
+    const issueIndex = Math.floor((seed * (i + 1) * 5) % 5)
+    switch (issueIndex) {
+      case 0:
+        issues.push("Heeft moeite met het toepassen van concepten in nieuwe situaties.")
+        break
+      case 1:
+        issues.push("Toont weinig interesse in de leerstof.")
+        break
+      case 2:
+        issues.push("Heeft moeite met het plannen en organiseren van taken.")
+        break
+      case 3:
+        issues.push("Toont weinig initiatief tijdens groepswerk.")
+        break
+      case 4:
+        issues.push("Heeft moeite met het stellen van vragen om de leerstof beter te begrijpen.")
+        break
+    }
   }
-}
 
-// Add this function to get consistent individual goal data for a student
-export const getStudentIndividualGoal = (studentName: string) => {
-  // In a real implementation, this would fetch from the database
-  // For now, we'll generate consistent data based on the student name
-
-  // Use the student name to generate a consistent hash
-  let hash = 0
-  for (let i = 0; i < studentName.length; i++) {
-    hash = (hash << 5) - hash + studentName.charCodeAt(i)
-    hash |= 0 // Convert to 32bit integer
-  }
-
-  // Use the hash to generate a consistent goal value
-  const seed = Math.abs(hash) / 100000000
-
-  // Generate goal between 65% and 90%
-  return Math.floor(65 + ((seed * 25) % 26))
-}
-
-// Add this function to check if a student has low attendance
-export const hasLowAttendance = (studentName: string, threshold = 85) => {
-  const attendance = getStudentAttendance(studentName)
-  return attendance.present < threshold
-}
-
-// Update the getStudentActivitiesForSubject function to properly filter activities by subject
-export const getStudentActivitiesForSubject = (studentName: string, subject: string) => {
-  // Get the competencies for this subject
-  const competencies = generateMockCompetencies(subject)
-
-  // Return all activities from all competencies, ensuring they belong to this subject
-  const allActivities = competencies.flatMap((comp) => comp.activities.filter((act) => act.subjectId === subject))
-
-  // Sort activities by date (newest first)
-  return allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-}
-
-// Function to get student competencies across all subjects
-export const getStudentCompetencies = (studentName: string) => {
-  // In a real implementation, this would fetch from the database
-  // For now, we'll generate a map of competencies by global ID
-
-  const competencyMap = new Map<string, Competency>()
-
-  // For each subject, get competencies and add them to the map if not already present
-  SUBJECTS.forEach((subject) => {
-    const competencies = generateMockCompetencies(subject)
-
-    competencies.forEach((comp) => {
-      if (!competencyMap.has(comp.globalId)) {
-        competencyMap.set(comp.globalId, comp)
-      }
-    })
-  })
-
-  return Array.from(competencyMap.values())
+  return issues
 }

@@ -13,8 +13,6 @@ import { useStudent } from "@/contexts/student-context"
 import { useMemo, useState, useRef, useEffect } from "react"
 import {
   getStudentData,
-  isStudentAtRisk,
-  getAtRiskReason,
   getStudentCompetencyIssues,
   getStudentProfileImage,
   getClassDistributionForSubject,
@@ -152,14 +150,14 @@ function DashboardContent() {
       schoolYears: "School years",
       grade: "Grade",
       year: "year",
-      attendanceThreshold: "Attendance:",
+      attendanceThreshold: "Attendance",
       save: "Save",
       saving: "Saving...",
       enterValidValue: "Enter a valid value between 50 and 100",
       thresholdSaved: "Attendance threshold saved!",
       errorSaving: "An error occurred while saving",
       minimumAttendance: "Minimum attendance percentage for students",
-      individualGoal: "Individual goal:",
+      individualGoal: "Individual goal",
       personalGoal: "Personal goal for this student",
       schoolYear: "School year",
       showMore: "Show more",
@@ -177,6 +175,9 @@ function DashboardContent() {
       enrollmentHistory: "Years enrolled at this school",
       years: "years",
       numberOfYears: "Number of years",
+      riskRules: "Risk Rules",
+      atRiskRule: "At risk: competency achievement below individual goal",
+      attendanceRiskRule: "Attendance risk: attendance below threshold",
     },
     nl: {
       noStudentSelected: "Geen leerling geselecteerd",
@@ -218,14 +219,14 @@ function DashboardContent() {
       schoolYears: "Schooljaren",
       grade: "Graad",
       year: "jaar",
-      attendanceThreshold: "Aanwezigheid:",
+      attendanceThreshold: "Aanwezigheid",
       save: "Opslaan",
       saving: "Opslaan...",
       enterValidValue: "Voer een geldige waarde in tussen 50 en 100",
       thresholdSaved: "Aanwezigheid grenswaarde opgeslagen!",
       errorSaving: "Er is een fout opgetreden bij het opslaan",
       minimumAttendance: "Minimale percentage aanwezigheid voor de leerlingen",
-      individualGoal: "Individuele doelstelling:",
+      individualGoal: "Individuele doelstelling",
       personalGoal: "Persoonlijke doelstelling voor deze leerling",
       schoolYear: "Schooljaar",
       showMore: "Toon meer",
@@ -243,6 +244,9 @@ function DashboardContent() {
       enrollmentHistory: "Jaren ingeschreven op deze school",
       years: "jaren",
       numberOfYears: "Aantal jaren",
+      riskRules: "Risicoregels",
+      atRiskRule: "Risico: competentiebehaald onder individuele doelstelling",
+      attendanceRiskRule: "Aanwezigheidsrisico: aanwezigheid onder grenswaarde",
     },
   }
 
@@ -803,14 +807,28 @@ function DashboardContent() {
                               className="object-cover"
                             />
                           </div>
-                          {isStudentAtRisk(selectedStudent) && (
-                            <div className="absolute -bottom-1 -right-1 bg-amber-100 dark:bg-amber-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
-                              <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                                {getAtRiskReason(selectedStudent)}
+                          <div className="absolute -bottom-1 -right-1 flex space-x-1">
+                            {percentage < individualGoal && (
+                              <div className="bg-amber-100 dark:bg-amber-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
+                                <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                                  {language === "en"
+                                    ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
+                                    : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                            {attendanceData && attendanceData.present < attendanceThreshold && (
+                              <div className="bg-blue-100 dark:bg-blue-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
+                                <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                                  {language === "en"
+                                    ? `Attendance (${attendanceData.present}%) is below threshold (${attendanceThreshold}%)`
+                                    : `Aanwezigheid (${attendanceData.present}%) is onder de grenswaarde (${attendanceThreshold}%)`}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Student information */}
@@ -865,14 +883,20 @@ function DashboardContent() {
                     {/* Settings sections */}
                     <div className="space-y-4">
                       {/* Attendance threshold setting */}
-                      <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-700">
+                      <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50/50 to-blue-100/30 dark:from-blue-900/10 dark:to-blue-800/20">
                         <div className="flex items-center justify-between">
-                          <label
-                            htmlFor="attendance-threshold"
-                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                          >
-                            {t.attendanceThreshold}
-                          </label>
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-8 rounded-full bg-blue-400 dark:bg-blue-500"></div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                              <label
+                                htmlFor="attendance-threshold"
+                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                {t.attendanceThreshold.replace(":", "")}
+                              </label>
+                            </div>
+                          </div>
                           <div className="flex items-center gap-2">
                             <div className="flex items-center">
                               <input
@@ -882,7 +906,7 @@ function DashboardContent() {
                                 max="100"
                                 ref={thresholdInputRef}
                                 defaultValue={attendanceThreshold}
-                                className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
+                                className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent"
                               />
                               <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
                             </div>
@@ -890,7 +914,7 @@ function DashboardContent() {
                               className={`px-2 py-1 text-xs ${
                                 isSaving
                                   ? "bg-gray-400"
-                                  : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                  : "bg-blue-100 hover:bg-blue-200 dark:bg-blue-800/30 dark:hover:bg-blue-700/40"
                               } text-gray-700 dark:text-gray-200 rounded-md border border-gray-300 dark:border-gray-600 flex items-center gap-1 shadow-sm transition-all duration-200`}
                               disabled={isSaving}
                               onClick={handleSaveAttendanceThreshold}
@@ -925,18 +949,91 @@ function DashboardContent() {
                             </button>
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.minimumAttendance}</p>
+                        <div className="flex items-center mt-2">
+                          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                            {/* Huidige aanwezigheid van de leerling */}
+                            <div
+                              className={`h-full ${
+                                attendanceData && attendanceData.present < attendanceThreshold
+                                  ? "bg-red-400 dark:bg-red-500"
+                                  : "bg-green-400 dark:bg-green-500"
+                              }`}
+                              style={{
+                                width: `${attendanceData && typeof attendanceData.present === "number" ? attendanceData.present : 0}%`,
+                              }}
+                            ></div>
+                            {/* Drempelwaarde markering */}
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-blue-600 dark:bg-blue-400 z-10"
+                              style={{ left: `${attendanceThreshold}%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></div>
+                            </div>
+                            {/* Global threshold marker */}
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-purple-600 dark:bg-purple-400 z-10 opacity-50"
+                              style={{ left: `85%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400 opacity-50"></div>
+                            </div>
+                          </div>
+                          <div className="ml-2 flex items-center gap-2 text-xs">
+                            <span
+                              className={`${
+                                attendanceData && attendanceData.present < attendanceThreshold
+                                  ? "text-red-500 dark:text-red-400"
+                                  : "text-green-500 dark:text-green-400"
+                              }`}
+                            >
+                              {attendanceData && typeof attendanceData.present === "number"
+                                ? attendanceData.present
+                                : 0}
+                              %
+                            </span>
+                            <span className="text-gray-400 dark:text-gray-500">|</span>
+                            <span className="text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span>
+                            <span className="text-gray-400 dark:text-gray-500">|</span>
+                            <span className="text-purple-500 dark:text-purple-400 opacity-70">85%</span>
+                            <span className="text-xs text-purple-500 dark:text-purple-400 opacity-70">(global)</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full ${
+                                attendanceData && attendanceData.present < attendanceThreshold
+                                  ? "bg-red-400 dark:bg-red-500"
+                                  : "bg-green-400 dark:bg-green-500"
+                              }`}
+                            ></span>
+                            <span>Huidige aanwezigheid</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500"></span>
+                            <span>{t.minimumAttendance}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-purple-400 dark:bg-purple-500 opacity-70"></span>
+                            <span>Globale drempel</span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Individual goal setting */}
-                      <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-700">
+                      <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gradient-to-r from-amber-50/50 to-amber-100/30 dark:from-amber-900/10 dark:to-amber-800/20">
                         <div className="flex items-center justify-between">
-                          <label
-                            htmlFor="individual-goal"
-                            className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                          >
-                            {t.individualGoal}:
-                          </label>
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-8 rounded-full bg-amber-400 dark:bg-amber-500"></div>
+                            <div className="flex items-center gap-1.5">
+                              <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                              <label
+                                htmlFor="individual-goal"
+                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                {t.individualGoal.replace(":", "")}
+                              </label>
+                            </div>
+                          </div>
                           <div className="flex items-center gap-2">
                             <div className="flex items-center">
                               <input
@@ -946,7 +1043,7 @@ function DashboardContent() {
                                 max="100"
                                 ref={goalInputRef}
                                 defaultValue={individualGoal}
-                                className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200"
+                                className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-amber-300 dark:focus:ring-amber-600 focus:border-transparent"
                               />
                               <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
                             </div>
@@ -954,7 +1051,7 @@ function DashboardContent() {
                               className={`px-2 py-1 text-xs ${
                                 isSavingGoal
                                   ? "bg-gray-400"
-                                  : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                                  : "bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/30 dark:hover:bg-amber-700/40"
                               } text-gray-700 dark:text-gray-200 rounded-md border border-gray-300 dark:border-gray-600 flex items-center gap-1 shadow-sm transition-all duration-200`}
                               disabled={isSavingGoal}
                               onClick={handleSaveIndividualGoal}
@@ -989,7 +1086,69 @@ function DashboardContent() {
                             </button>
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t.personalGoal}</p>
+                        <div className="flex items-center mt-2">
+                          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                            {/* Huidige competentiepercentage van de leerling */}
+                            <div
+                              className={`h-full ${
+                                percentage < individualGoal
+                                  ? "bg-red-400 dark:bg-red-500"
+                                  : "bg-green-400 dark:bg-green-500"
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                            {/* Doelstellingswaarde markering */}
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-amber-600 dark:bg-amber-400 z-10"
+                              style={{ left: `${individualGoal}%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400"></div>
+                            </div>
+                            {/* Global threshold marker */}
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-purple-600 dark:bg-purple-400 z-10 opacity-50"
+                              style={{ left: `70%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400 opacity-50"></div>
+                            </div>
+                          </div>
+                          <div className="ml-2 flex items-center gap-2 text-xs">
+                            <span
+                              className={`${
+                                percentage < individualGoal
+                                  ? "text-red-500 dark:text-red-400"
+                                  : "text-green-500 dark:text-green-400"
+                              }`}
+                            >
+                              {percentage.toFixed(1)}%
+                            </span>
+                            <span className="text-gray-400 dark:text-gray-500">|</span>
+                            <span className="text-amber-500 dark:text-amber-400">{individualGoal}%</span>
+                            <span className="text-gray-400 dark:text-gray-500">|</span>
+                            <span className="text-purple-500 dark:text-purple-400 opacity-70">70%</span>
+                            <span className="text-xs text-purple-500 dark:text-purple-400 opacity-70">(global)</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`inline-block w-2 h-2 rounded-full ${
+                                percentage < individualGoal
+                                  ? "bg-red-400 dark:bg-red-500"
+                                  : "bg-green-400 dark:bg-green-500"
+                              }`}
+                            ></span>
+                            <span>Huidige competentie</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
+                            <span>{t.personalGoal}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-purple-400 dark:bg-purple-500 opacity-70"></span>
+                            <span>Globale drempel</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -1265,8 +1424,7 @@ function DashboardContent() {
                     )}
 
                     {/* At Risk section - show when student is at risk OR attendance is below threshold */}
-                    {((isStudentAtRisk(selectedStudent) && percentage < individualGoal) ||
-                      attendanceData.present < attendanceThreshold) && (
+                    {(percentage < individualGoal || attendanceData.present < attendanceThreshold) && (
                       <div className="mt-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-md font-medium text-amber-600 dark:text-amber-500 flex items-center gap-2">
@@ -1287,19 +1445,21 @@ function DashboardContent() {
                         </div>
                         <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md border border-amber-200 dark:border-amber-800">
                           {/* Always show the most important information */}
-                          {isStudentAtRisk(selectedStudent) && percentage < individualGoal && (
+                          {percentage < individualGoal && (
                             <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
-                              {getAtRiskReason(selectedStudent)}
+                              {language === "en"
+                                ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
+                                : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`}
                             </p>
                           )}
 
                           {/* Attendance warning - always show if below threshold */}
                           {attendanceData.present < attendanceThreshold && (
                             <div
-                              className={`${isStudentAtRisk(selectedStudent) && percentage < individualGoal ? "mt-3" : ""} bg-amber-50/50 dark:bg-amber-900/10 rounded-md p-2 border border-amber-200 dark:border-amber-800/30`}
+                              className={`${percentage < individualGoal ? "mt-3" : ""} bg-amber-50/50 dark:bg-amber-900/10 rounded-md p-2 border border-amber-200 dark:border-amber-800/30`}
                             >
                               <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
                                 <div>
                                   <p className="text-sm text-amber-800 dark:text-amber-400 font-medium flex flex-wrap items-center gap-1">
                                     <span>{t.attendance}</span>
@@ -1346,6 +1506,24 @@ function DashboardContent() {
                               </div>
                             )}
 
+                            <div className="mt-3 bg-gray-100 dark:bg-gray-800/50 p-2 rounded-md">
+                              <p className="text-xs font-medium mb-1">
+                                {language === "en" ? "Risk Rules:" : "Risicoregels:"}
+                              </p>
+                              <ul className="list-disc pl-4 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                <li>
+                                  {language === "en"
+                                    ? "At risk: competency achievement below individual goal"
+                                    : "Risico: competentiebehaald onder individuele doelstelling"}
+                                </li>
+                                <li>
+                                  {language === "en"
+                                    ? "Attendance risk: attendance below threshold"
+                                    : "Aanwezigheidsrisico: aanwezigheid onder grenswaarde"}
+                                </li>
+                              </ul>
+                            </div>
+
                             <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">{t.needsGuidance}</p>
                           </div>
                         </div>
@@ -1373,9 +1551,7 @@ function DashboardContent() {
                       </div>
                       <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                         <p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
-                          {isAboveAverage &&
-                          percentage >= individualGoal &&
-                          attendanceData.present >= attendanceThreshold
+                          {percentage >= individualGoal && attendanceData.present >= attendanceThreshold
                             ? t.passed
                             : t.evaluationNeeded}
                         </p>
@@ -1398,12 +1574,26 @@ function DashboardContent() {
                               {attendanceThreshold}
                               %)
                             </li>
-                            <li>
-                              {t.personalAverage}: {isAboveAverage ? "✓" : "✗"}
-                            </li>
                           </ul>
                           <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.passedStatus}</p>
                           <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.individualGoalExplanation}</p>
+                          <div className="mt-3 bg-gray-100 dark:bg-gray-800/50 p-2 rounded-md">
+                            <p className="text-xs font-medium mb-1">
+                              {language === "en" ? "Risk Rules:" : "Risicoregels:"}
+                            </p>
+                            <ul className="list-disc pl-4 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                              <li>
+                                {language === "en"
+                                  ? "At risk: competency achievement below individual goal"
+                                  : "Risico: competentiebehaald onder individuele doelstelling"}
+                              </li>
+                              <li>
+                                {language === "en"
+                                  ? "Attendance risk: attendance below threshold"
+                                  : "Aanwezigheidsrisico: aanwezigheid onder grenswaarde"}
+                              </li>
+                            </ul>
+                          </div>
                         </div>
                       </div>
                     </div>

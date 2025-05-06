@@ -73,8 +73,8 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
     setIsAboveAverage(isWithinAverage)
   }, [selectedStudent, percentage])
 
-  // Check if student is truly at risk based on individual goal
-  const isTrulyAtRisk = atRisk && percentage < individualGoal
+  // Check if student is at risk based on competency achievement being below individual goal
+  const isAtRisk = percentage < individualGoal
 
   // Get competencies achieved per semester
   const getCompetenciesPerSemester = () => {
@@ -167,15 +167,13 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
             {selectedStudent ? (
               <div className="flex items-center gap-2 mb-2">
                 <div className="text-sm font-medium dark:text-gray-200">{t.status}:</div>
-                {isTrulyAtRisk && (
+                {isAtRisk && (
                   <div className="relative group">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
                     <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                      {atRiskReason} (
                       {language === "en"
-                        ? `below individual goal of ${individualGoal}%`
-                        : `onder individuele doelstelling van ${individualGoal}%`}
-                      )
+                        ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
+                        : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`}
                     </div>
                   </div>
                 )}
@@ -192,21 +190,17 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
                 <div className="flex items-center gap-2 relative group">
                   <CheckCircle2
                     className={`h-4 w-4 ${
-                      !isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
-                        ? "text-green-500"
-                        : "text-gray-400"
+                      !isAtRisk && attendanceData.present >= attendanceThreshold ? "text-green-500" : "text-gray-400"
                     }`}
                   />
                   <span
                     className={`text-xs ${
-                      !isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
+                      !isAtRisk && attendanceData.present >= attendanceThreshold
                         ? "font-medium text-green-600 dark:text-green-400"
                         : "text-gray-500 dark:text-gray-400"
                     }`}
                   >
-                    {!isTrulyAtRisk || (isAboveAverage && percentage >= individualGoal)
-                      ? t.withinTarget
-                      : t.evaluationNeeded}
+                    {!isAtRisk && attendanceData.present >= attendanceThreshold ? t.withinTarget : t.evaluationNeeded}
                   </span>
                   {/* Tooltip that appears on hover */}
                   <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
@@ -222,11 +216,19 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: Pro
                         {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} (
                         {language === "en" ? "goal" : "doel"}: {attendanceThreshold}%)
                       </li>
-                      <li>
-                        {language === "en" ? "Personal average" : "Persoonlijk gemiddelde"}:{" "}
-                        {isAboveAverage ? "✓" : "✗"}
-                      </li>
                     </ul>
+                    <div className="mt-1 border-t border-gray-700 pt-1">
+                      <p className="text-xs">
+                        {language === "en"
+                          ? "At risk: competency achievement below individual goal"
+                          : "Risico: competentiebehaald onder individuele doelstelling"}
+                      </p>
+                      <p className="text-xs">
+                        {language === "en"
+                          ? "Attendance risk: attendance below threshold"
+                          : "Aanwezigheidsrisico: aanwezigheid onder grenswaarde"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
