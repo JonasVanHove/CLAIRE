@@ -224,17 +224,30 @@ export function SettingsMenu() {
             <div className="space-y-4">
               {/* Global Parameters Option */}
               <div
-                className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-md border border-blue-100 dark:border-blue-800/30 hover:bg-blue-100 dark:hover:bg-blue-800/20 transition-colors cursor-pointer"
+                className="flex items-center justify-between relative cursor-pointer"
                 onClick={() => {
                   setShowGlobalParams(true)
                   setIsOpen(false)
                 }}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Sliders className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{t.globalParameters}</span>
+                <div className="flex items-center gap-2">
+                  <Sliders className="h-4 w-4 text-[#49454F]" />
+                  <span className="text-sm text-gray-700 dark:text-gray-700">{t.globalParameters}</span>
                 </div>
-                <p className="text-xs text-blue-600 dark:text-blue-300">{t.globalParametersDesc}</p>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-500"
+                >
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
               </div>
 
               {/* Hide Non-Completed Toggle - with consistent label and tooltip */}

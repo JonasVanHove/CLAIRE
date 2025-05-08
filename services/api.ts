@@ -791,5 +791,43 @@ class ApiService {
   }
 }
 
-// Export a singleton instance of the API service
-export const api = new ApiService()
+// Create a singleton instance of the API service
+const apiService = new ApiService()
+
+// Export the API with all methods from ApiService plus our additional methods
+export const api = {
+  // Include all methods from the ApiService instance
+  getStudentList: apiService.getStudentList.bind(apiService),
+  getStudentDetails: apiService.getStudentDetails.bind(apiService),
+  getSemesterScores: apiService.getSemesterScores.bind(apiService),
+  getSubjectCompetencies: apiService.getSubjectCompetencies.bind(apiService),
+  getCompetencyActivities: apiService.getCompetencyActivities.bind(apiService),
+  getSubjectActivities: apiService.getSubjectActivities.bind(apiService),
+  getClassDistribution: apiService.getClassDistribution.bind(apiService),
+  getStudentSemesterData: apiService.getStudentSemesterData.bind(apiService),
+  updateAttendanceThreshold: apiService.updateAttendanceThreshold.bind(apiService),
+  updateIndividualGoal: apiService.updateIndividualGoal.bind(apiService),
+
+  /**
+   * Updates global threshold settings
+   * @param {Object} params - The threshold parameters
+   * @param {number} params.attendanceThreshold - The new attendance threshold percentage
+   * @param {number} params.individualGoal - The new individual goal percentage
+   * @param {string|string[]} params.targetClasses - The classes to apply these thresholds to ('all' or array of class names)
+   * @returns {Promise<{success: boolean}>} - Result of the operation
+   */
+  updateGlobalThresholds: async (params: {
+    attendanceThreshold: number
+    individualGoal: number
+    targetClasses: "all" | string[]
+  }): Promise<{ success: boolean }> => {
+    // In a real implementation, this would make an API call
+    // For now, we'll simulate a successful update
+    console.log("Updating global thresholds:", params)
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    return { success: true }
+  },
+}

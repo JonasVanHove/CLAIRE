@@ -28,13 +28,13 @@ export function StudentSelector() {
   const fetchStudentData = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Use the API service to fetch student data
+      // Use the API service to fetch student data with current thresholds
       const response = await api.getStudentList({
         classes: activeFilters,
         searchTerm,
         showOnlyAtRisk,
         showOnlyAttendanceRisk,
-        attendanceThreshold,
+        attendanceThreshold, // This will use the current threshold value
       })
 
       setStudentGroups(response)
@@ -50,6 +50,22 @@ export function StudentSelector() {
   // Call the API when filter parameters change
   useEffect(() => {
     fetchStudentData()
+  }, [fetchStudentData])
+
+  // Add this effect to refresh student data when thresholds change
+  useEffect(() => {
+    const handleThresholdUpdate = (event: CustomEvent) => {
+      if (event.detail?.thresholdsUpdated) {
+        // Refresh the student list with new threshold values
+        fetchStudentData()
+      }
+    }
+
+    window.addEventListener("refreshStudentData", handleThresholdUpdate as EventListener)
+
+    return () => {
+      window.removeEventListener("refreshStudentData", handleThresholdUpdate as EventListener)
+    }
   }, [fetchStudentData])
 
   // Function to fetch detailed student information when a student is selected

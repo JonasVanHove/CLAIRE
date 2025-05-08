@@ -82,8 +82,10 @@ function DashboardContent() {
 
   // Add a state for the threshold value - default to 85%
   const [attendanceThreshold, setAttendanceThreshold] = useState(85)
+  const [individualGoal, setIndividualGoal] = useState(60)
+  const [isLoadingThresholds, setIsLoadingThresholds] = useState(false)
   // Add a state for the individual goal - default to the value from the data
-  const [individualGoal, setIndividualGoal] = useState(() => getStudentIndividualGoal(selectedStudent))
+  // const [individualGoal, setIndividualGoal] = useState(() => getStudentIndividualGoal(selectedStudent))
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const thresholdInputRef = useRef<HTMLInputElement>(null)
@@ -694,6 +696,33 @@ function DashboardContent() {
         // Update local state after successful save
         setAttendanceThreshold(newThreshold)
 
+        // Also update the class threshold in localStorage
+        try {
+          const classThresholdsJSON = localStorage.getItem("classThresholds")
+          const classThresholds = classThresholdsJSON ? JSON.parse(classThresholdsJSON) : []
+
+          // Find if this class already has thresholds
+          const classIndex = classThresholds.findIndex((cls: any) => cls.className === selectedClass)
+
+          if (classIndex >= 0) {
+            // Update existing class threshold
+            classThresholds[classIndex].attendanceThreshold = newThreshold
+          } else {
+            // Add new class threshold
+            classThresholds.push({
+              className: selectedClass,
+              attendanceThreshold: newThreshold,
+              individualGoal: individualGoal,
+              useGlobal: false,
+            })
+          }
+
+          // Save back to localStorage
+          localStorage.setItem("classThresholds", JSON.stringify(classThresholds))
+        } catch (error) {
+          console.error("Error updating class threshold in localStorage:", error)
+        }
+
         // Show success message
         alert(t.thresholdSaved)
       } else {
@@ -707,7 +736,8 @@ function DashboardContent() {
     }
   }
 
-  // Replace the handleSaveIndividualGoal function with API call
+  // Find the handleSaveIndividualGoal function and replace it with this updated version
+  // that saves to student profile instead of class thresholds
   const handleSaveIndividualGoal = async () => {
     if (!goalInputRef.current) return
 
@@ -726,6 +756,24 @@ function DashboardContent() {
       if (result.success) {
         // Update local state after successful save
         setIndividualGoal(newGoal)
+
+        // Save to student profile in localStorage instead of class thresholds
+        try {
+          // Get existing student profiles or initialize empty object
+          const studentProfilesJSON = localStorage.getItem("studentProfiles")
+          const studentProfiles = studentProfilesJSON ? JSON.parse(studentProfilesJSON) : {}
+
+          // Update or create this student's profile
+          studentProfiles[selectedStudent] = {
+            ...(studentProfiles[selectedStudent] || {}),
+            individualGoal: newGoal,
+          }
+
+          // Save back to localStorage
+          localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+        } catch (error) {
+          console.error("Error updating student profile in localStorage:", error)
+        }
 
         // Show success message
         alert(t.personalGoal + "!")
@@ -756,6 +804,174 @@ function DashboardContent() {
         return <span className="font-medium text-green-600 dark:text-green-400">{score}%</span>
     }
   }
+
+  // Add event listener to handle threshold updates and refresh student data
+  const [isLoadingStudentData, setIsLoadingStudentData] = useState(false)
+  const { setStudentData } = useStudent() // Remove fetchStudentData as it doesn't exist
+
+  useEffect(() => {
+    // Function to handle the refresh event
+    const handleRefreshStudentData = async (event: CustomEvent) => {
+      if (!selectedStudent) return
+
+      // Show loading state
+      setIsLoadingStudentData(true)
+
+      try {
+        // Fetch updated student data with new thresholds
+        const studentData = await api.getStudentDetails(selectedStudent, selectedClass)
+
+        // Update the student context with the fetched data
+        setStudentData(studentData)
+
+        // Update local threshold values if they were changed
+        if (event.detail?.thresholdsUpdated) {
+          if (event.detail.attendanceThreshold) {
+            setAttendanceThreshold(event.detail.attendanceThreshold)
+          }
+          if (event.detail.individualGoal) {
+            setIndividualGoal(event.detail.individualGoal)
+          }
+        }
+
+        // Reload thresholds from database
+        loadThresholdsFromDB()
+      } catch (error) {
+        console.error("Error refreshing student data:", error)
+      } finally {
+        setIsLoadingStudentData(false)
+      }
+    }
+
+    // Add event listener for the custom event
+    window.addEventListener("refreshStudentData", handleRefreshStudentData as EventListener)
+
+    // Clean up the event listener when component unmounts
+    return () => {
+      window.removeEventListener("refreshStudentData", handleRefreshStudentData as EventListener)
+    }
+  }, [selectedStudent, selectedClass, setStudentData])
+
+  // Add state for global thresholds
+  const [globalAttendanceThreshold, setGlobalAttendanceThreshold] = useState(85)
+  const [globalIndividualGoal, setGlobalIndividualGoal] = useState(70)
+
+  // Update the loadThresholdsFromDB function to load from student profile
+  const loadThresholdsFromDB = async () => {
+    if (!selectedClass) return
+
+    setIsLoadingThresholds(true)
+    try {
+      // Try to load from localStorage first (our mock database)
+      const classThresholdsJSON = localStorage.getItem("classThresholds")
+      if (classThresholdsJSON) {
+        const classThresholds = JSON.parse(classThresholdsJSON)
+
+        // Find the thresholds for the current class
+        const classThreshold = classThresholds.find((cls: any) => cls.className === selectedClass)
+
+        if (classThreshold) {
+          // Use the class-specific attendance threshold
+          setAttendanceThreshold(classThreshold.attendanceThreshold)
+          console.log(
+            `Loaded attendance threshold for ${selectedClass} from database:`,
+            classThreshold.attendanceThreshold,
+          )
+        }
+
+        // Also load global thresholds for display purposes
+        const globalSettings = classThresholds.find((cls: any) => cls.className === "global")
+        if (globalSettings) {
+          setGlobalAttendanceThreshold(globalSettings.attendanceThreshold || 85)
+          setGlobalIndividualGoal(globalSettings.individualGoal || 70)
+        }
+      }
+
+      // Load individual goal from student profile if available
+      if (selectedStudent) {
+        const studentProfilesJSON = localStorage.getItem("studentProfiles")
+        if (studentProfilesJSON) {
+          const studentProfiles = JSON.parse(studentProfilesJSON)
+          if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].individualGoal) {
+            setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
+            console.log(
+              `Loaded individual goal for ${selectedStudent} from profile:`,
+              studentProfiles[selectedStudent].individualGoal,
+            )
+          } else {
+            // If no individual goal in profile, fall back to the default from data
+            setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+          }
+        } else {
+          // If no profiles exist, fall back to the default from data
+          setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+        }
+      }
+
+      // Load global parameters for attendance threshold
+      try {
+        // First try to get from global parameters
+        const globalParamsJSON = localStorage.getItem("globalParameters")
+        if (globalParamsJSON) {
+          const globalParams = JSON.parse(globalParamsJSON)
+          if (globalParams.attendanceThreshold) {
+            setGlobalAttendanceThreshold(Number(globalParams.attendanceThreshold))
+            console.log("Loaded global attendance threshold from Global Parameters:", globalParams.attendanceThreshold)
+
+            // If no class-specific threshold is set, use the global one
+            if (!classThresholdsJSON) {
+              setAttendanceThreshold(Number(globalParams.attendanceThreshold))
+            }
+          }
+        } else {
+          // Fall back to legacy storage if global parameters not found
+          // Declare globalAttendanceThresholdValue before using it
+          const globalAttendanceThresholdValue: string | null = localStorage.getItem("globalAttendanceThreshold")
+          if (globalAttendanceThresholdValue) {
+            setGlobalAttendanceThreshold(Number(globalAttendanceThresholdValue))
+            if (!classThresholdsJSON) {
+              setAttendanceThreshold(Number(globalAttendanceThresholdValue))
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading global parameters:", error)
+      }
+
+      // If nothing in localStorage, fall back to the default values from the data
+      if (!globalAttendanceThresholdValue && !classThresholdsJSON) {
+        setAttendanceThreshold(85) // Default attendance threshold
+      }
+    } catch (error) {
+      console.error("Error loading thresholds from database:", error)
+      // Fall back to default values if there's an error
+      if (selectedStudent) {
+        setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+      }
+      setAttendanceThreshold(85) // Default attendance threshold
+    } finally {
+      setIsLoadingThresholds(false)
+    }
+  }
+
+  // Update the useEffect that loads thresholds to use the new function
+  useEffect(() => {
+    loadThresholdsFromDB()
+  }, [selectedClass, selectedStudent])
+
+  // Now update the attendance threshold section to show the correct global value
+  // Find this code in the attendance threshold section:
+  // Replace with:
+
+  // Find this code in the attendance threshold section:
+  // Replace with:
+
+  // Now update the individual goal section to show the correct global value
+  // Find this code in the individual goal section:
+  // Replace with:
+
+  // Find this code in the individual goal section:
+  // Replace with:
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -889,12 +1105,53 @@ function DashboardContent() {
                             <div className="w-1 h-8 rounded-full bg-blue-400 dark:bg-blue-500"></div>
                             <div className="flex items-center gap-1.5">
                               <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                              <label
-                                htmlFor="attendance-threshold"
-                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                {t.attendanceThreshold.replace(":", "")}
-                              </label>
+                              <div>
+                                <label
+                                  htmlFor="attendance-threshold"
+                                  className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                  {t.attendanceThreshold.replace(":", "")}
+                                </label>
+                                {isLoadingThresholds ? (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                                    <svg
+                                      className="animate-spin h-3 w-3"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                    <span>{language === "en" ? "Loading..." : "Laden..."}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-1 mt-0.5">
+                                    <div className="text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-1">
+                                      <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500"></span>
+                                      {language === "en"
+                                        ? `Global class threshold: ${globalAttendanceThreshold}%`
+                                        : `Globale klasdrempel: ${globalAttendanceThreshold}%`}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {language === "en"
+                                        ? `Individual threshold: ${attendanceThreshold}%`
+                                        : `Individuele drempel: ${attendanceThreshold}%`}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -962,20 +1219,22 @@ function DashboardContent() {
                                 width: `${attendanceData && typeof attendanceData.present === "number" ? attendanceData.present : 0}%`,
                               }}
                             ></div>
-                            {/* Drempelwaarde markering */}
+                            {/* Drempelwaarde markering - individueel */}
                             <div
                               className="absolute top-0 bottom-0 w-0.5 bg-blue-600 dark:bg-blue-400 z-10"
                               style={{ left: `${attendanceThreshold}%` }}
                             >
                               <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></div>
                             </div>
-                            {/* Global threshold marker */}
-                            <div
-                              className="absolute top-0 bottom-0 w-0.5 bg-purple-600 dark:bg-purple-400 z-10 opacity-50"
-                              style={{ left: `85%` }}
-                            >
-                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400 opacity-50"></div>
-                            </div>
+                            {/* Drempelwaarde markering - klas */}
+                            {globalAttendanceThreshold !== attendanceThreshold && (
+                              <div
+                                className="absolute top-0 bottom-0 w-0.5 bg-blue-300 dark:bg-blue-600 z-10 dashed-line"
+                                style={{ left: `${globalAttendanceThreshold}%` }}
+                              >
+                                <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-300 dark:bg-blue-600"></div>
+                              </div>
+                            )}
                           </div>
                           <div className="ml-2 flex items-center gap-2 text-xs">
                             <span
@@ -992,9 +1251,12 @@ function DashboardContent() {
                             </span>
                             <span className="text-gray-400 dark:text-gray-500">|</span>
                             <span className="text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span>
-                            <span className="text-gray-400 dark:text-gray-500">|</span>
-                            <span className="text-purple-500 dark:text-purple-400 opacity-70">85%</span>
-                            <span className="text-xs text-purple-500 dark:text-purple-400 opacity-70">(global)</span>
+                            {globalAttendanceThreshold !== attendanceThreshold && (
+                              <>
+                                <span className="text-gray-400 dark:text-gray-500">|</span>
+                                <span className="text-blue-300 dark:text-blue-600">{globalAttendanceThreshold}%</span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-3">
@@ -1010,12 +1272,14 @@ function DashboardContent() {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="inline-block w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500"></span>
-                            <span>{t.minimumAttendance}</span>
+                            <span>{language === "en" ? "Individual threshold" : "Individuele drempel"}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="inline-block w-2 h-2 rounded-full bg-purple-400 dark:bg-purple-500 opacity-70"></span>
-                            <span>Globale drempel</span>
-                          </div>
+                          {globalAttendanceThreshold !== attendanceThreshold && (
+                            <div className="flex items-center gap-1">
+                              <span className="inline-block w-2 h-2 rounded-full bg-blue-300 dark:bg-blue-600"></span>
+                              <span>{language === "en" ? "Class threshold" : "Klasdrempel"}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1026,12 +1290,58 @@ function DashboardContent() {
                             <div className="w-1 h-8 rounded-full bg-amber-400 dark:bg-amber-500"></div>
                             <div className="flex items-center gap-1.5">
                               <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                              <label
-                                htmlFor="individual-goal"
-                                className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                              >
-                                {t.individualGoal.replace(":", "")}
-                              </label>
+                              <div>
+                                <label
+                                  htmlFor="individual-goal"
+                                  className="text-xs font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                  {t.individualGoal.replace(":", "")}
+                                </label>
+                                {isLoadingThresholds ? (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                                    <svg
+                                      className="animate-spin h-3 w-3"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                    <span>{language === "en" ? "Loading..." : "Laden..."}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-1 mt-0.5">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {language === "en"
+                                        ? `Personal goal for ${selectedStudent}`
+                                        : `Persoonlijke doelstelling voor ${selectedStudent}`}
+                                    </div>
+                                    <div className="text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-1">
+                                      <span className="w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
+                                      {language === "en"
+                                        ? `Global goal threshold: ${globalIndividualGoal}%`
+                                        : `Globale doeldrempel: ${globalIndividualGoal}%`}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {language === "en"
+                                        ? `Individual goal: ${individualGoal}%`
+                                        : `Individuele doelstelling: ${individualGoal}%`}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1097,20 +1407,22 @@ function DashboardContent() {
                               }`}
                               style={{ width: `${percentage}%` }}
                             ></div>
-                            {/* Doelstellingswaarde markering */}
+                            {/* Drempelwaarde markering - individueel */}
                             <div
                               className="absolute top-0 bottom-0 w-0.5 bg-amber-600 dark:bg-amber-400 z-10"
                               style={{ left: `${individualGoal}%` }}
                             >
                               <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400"></div>
                             </div>
-                            {/* Global threshold marker */}
-                            <div
-                              className="absolute top-0 bottom-0 w-0.5 bg-purple-600 dark:bg-purple-400 z-10 opacity-50"
-                              style={{ left: `70%` }}
-                            >
-                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400 opacity-50"></div>
-                            </div>
+                            {/* Drempelwaarde markering - klas */}
+                            {globalIndividualGoal !== individualGoal && (
+                              <div
+                                className="absolute top-0 bottom-0 w-0.5 bg-amber-300 dark:bg-amber-600 z-10 dashed-line"
+                                style={{ left: `${globalIndividualGoal}%` }}
+                              >
+                                <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-300 dark:bg-amber-600"></div>
+                              </div>
+                            )}
                           </div>
                           <div className="ml-2 flex items-center gap-2 text-xs">
                             <span
@@ -1124,9 +1436,12 @@ function DashboardContent() {
                             </span>
                             <span className="text-gray-400 dark:text-gray-500">|</span>
                             <span className="text-amber-500 dark:text-amber-400">{individualGoal}%</span>
-                            <span className="text-gray-400 dark:text-gray-500">|</span>
-                            <span className="text-purple-500 dark:text-purple-400 opacity-70">70%</span>
-                            <span className="text-xs text-purple-500 dark:text-purple-400 opacity-70">(global)</span>
+                            {globalIndividualGoal !== individualGoal && (
+                              <>
+                                <span className="text-gray-400 dark:text-gray-500">|</span>
+                                <span className="text-amber-300 dark:text-amber-600">{globalIndividualGoal}%</span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-3">
@@ -1142,12 +1457,14 @@ function DashboardContent() {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="inline-block w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-                            <span>{t.personalGoal}</span>
+                            <span>{language === "en" ? "Individual goal" : "Individuele doelstelling"}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="inline-block w-2 h-2 rounded-full bg-purple-400 dark:bg-purple-500 opacity-70"></span>
-                            <span>Globale drempel</span>
-                          </div>
+                          {globalIndividualGoal !== individualGoal && (
+                            <div className="flex items-center gap-1">
+                              <span className="inline-block w-2 h-2 rounded-full bg-amber-300 dark:bg-amber-600"></span>
+                              <span>{language === "en" ? "Class goal" : "Klasdoelstelling"}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1467,7 +1784,7 @@ function DashboardContent() {
                                       {attendanceData.present}%
                                     </span>
                                     <span>{t.attendanceBelow}</span>
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-amber-300">
                                       {attendanceThreshold}%
                                     </span>
                                   </p>
