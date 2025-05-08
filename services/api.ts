@@ -533,7 +533,7 @@ class ApiService {
       }
 
       const total = 100
-      const achieved = Math.floor(pseudoRandom(60) + 20) // 20-80%
+      const achieved = Math.floor(pseudoRandom(60)) // 0-59%
       const partiallyAchieved = Math.floor(pseudoRandom(100 - achieved) / 2)
       const notAchieved = total - achieved - partiallyAchieved
 

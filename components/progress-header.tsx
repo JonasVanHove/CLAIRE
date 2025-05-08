@@ -21,7 +21,7 @@ interface ProgressHeaderProps {
   individualGoal?: number
 }
 
-export function ProgressHeader({ attendanceThreshold, individualGoal = 75 }: ProgressHeaderProps) {
+export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: ProgressHeaderProps) {
   const { selectedStudent, selectedClass } = useStudent()
   const { achieved, total } = getTotalCompetencies(selectedStudent)
   const profileImage = getStudentProfileImage(selectedStudent)

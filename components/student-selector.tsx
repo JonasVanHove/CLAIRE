@@ -28,13 +28,15 @@ export function StudentSelector() {
   const fetchStudentData = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Use the API service to fetch student data with current thresholds
+      // Use the API service to fetch student data with updated default thresholds
       const response = await api.getStudentList({
         classes: activeFilters,
         searchTerm,
         showOnlyAtRisk,
         showOnlyAttendanceRisk,
-        attendanceThreshold, // This will use the current threshold value
+        attendanceThreshold: attendanceThreshold || 80, // Set default to 80%
+        individualGoal: 60, // Set default goal to 60%
+        seed: 42, // Add a consistent seed for deterministic results
       })
 
       setStudentGroups(response)
@@ -68,19 +70,79 @@ export function StudentSelector() {
     }
   }, [fetchStudentData])
 
+  useEffect(() => {
+    // Initialize default thresholds in localStorage if not already set
+    const storedAttendanceThreshold = localStorage.getItem("globalAttendanceThreshold")
+    const storedIndividualGoal = localStorage.getItem("globalIndividualGoal")
+
+    if (!storedAttendanceThreshold) {
+      localStorage.setItem("globalAttendanceThreshold", "80")
+    }
+
+    if (!storedIndividualGoal) {
+      localStorage.setItem("globalIndividualGoal", "60")
+    }
+
+    // Also update any global parameters
+    try {
+      const globalParamsJSON = localStorage.getItem("globalParameters")
+      const globalParams = globalParamsJSON ? JSON.parse(globalParamsJSON) : {}
+
+      if (!globalParams.attendanceThreshold) {
+        globalParams.attendanceThreshold = 80
+      }
+
+      if (!globalParams.individualGoal) {
+        globalParams.individualGoal = 60
+      }
+
+      localStorage.setItem("globalParameters", JSON.stringify(globalParams))
+    } catch (error) {
+      console.error("Error updating global parameters:", error)
+    }
+  }, [])
+
+  // Store and restore filter states between refreshes
+  useEffect(() => {
+    // Restore filters from localStorage on component mount
+    const storedFilters = localStorage.getItem("studentSelectorFilters")
+    if (storedFilters) {
+      try {
+        const parsedFilters = JSON.parse(storedFilters)
+        if (parsedFilters.activeFilters) setActiveFilters(parsedFilters.activeFilters)
+        if (parsedFilters.showOnlyAtRisk !== undefined) setShowOnlyAtRisk(parsedFilters.showOnlyAtRisk)
+        if (parsedFilters.showOnlyAttendanceRisk !== undefined)
+          setShowOnlyAttendanceRisk(parsedFilters.showOnlyAttendanceRisk)
+        if (parsedFilters.searchTerm) setSearchTerm(parsedFilters.searchTerm)
+      } catch (error) {
+        console.error("Error restoring filters from localStorage:", error)
+      }
+    }
+  }, [])
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    const filtersToSave = {
+      activeFilters,
+      showOnlyAtRisk,
+      showOnlyAttendanceRisk,
+      searchTerm,
+    }
+    localStorage.setItem("studentSelectorFilters", JSON.stringify(filtersToSave))
+  }, [activeFilters, showOnlyAtRisk, showOnlyAttendanceRisk, searchTerm])
+
   // Function to fetch detailed student information when a student is selected
   const fetchStudentDetails = useCallback(
     async (studentName: string, className: string) => {
       setIsLoadingStudentData(true)
       try {
-        // Use the API service to fetch student details
-        const studentData = await api.getStudentDetails(studentName, className)
+        // Use the API service to fetch student details with a consistent seed
+        const studentData = await api.getStudentDetails(studentName, className, {
+          seed: 12345, // Add a consistent seed for deterministic results
+        })
 
         // Update the student context with the fetched data
         setStudentData(studentData)
-
-        // Instead of adding a CSS class to the body, we'll use our own loading state
-        // which is already handled by the isLoadingStudentData state
 
         return studentData
       } catch (error) {
@@ -156,8 +218,15 @@ export function StudentSelector() {
     }[],
     className: string,
   ) => {
-    return students.map((student) => {
+    // Sort students by name to ensure consistent order
+    const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name))
+
+    return sortedStudents.map((student) => {
       const { name, atRisk, atRiskReason, lowAttendance, attendancePercentage } = student
+
+      // Get threshold values from localStorage or use defaults
+      const individualGoal = Number.parseInt(localStorage.getItem("globalIndividualGoal") || "60", 10)
+      const attendanceThreshold = Number.parseInt(localStorage.getItem("globalAttendanceThreshold") || "80", 10)
 
       return (
         <div
@@ -166,28 +235,29 @@ export function StudentSelector() {
           className={`flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer ${
             selectedStudent === name ? "bg-[#ECE6F0] dark:bg-gray-700" : "hover:bg-gray-100 dark:hover:bg-gray-700"
           }`}
+          data-student-name={name}
         >
           <div className="flex items-center overflow-hidden">
             <User className="h-4 w-4 flex-shrink-0 text-[#49454F] dark:text-gray-300 mr-2" />
             <span className="text-sm truncate dark:text-gray-200 flex-1 mr-2">{name}</span>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0 min-w-[40px] justify-end">
               {atRisk && (
                 <div className="relative group">
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                  <div className="absolute right-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
                     {language === "en"
-                      ? `${atRiskReason || "Student at risk"} (below individual goal)`
-                      : `${atRiskReason || "Student at risk"} (onder individuele doelstelling)`}
+                      ? `${atRiskReason || "Student at risk"} (below individual goal of ${individualGoal}%)`
+                      : `${atRiskReason || "Student at risk"} (onder individuele doelstelling van ${individualGoal}%)`}
                   </div>
                 </div>
               )}
               {lowAttendance && (
                 <div className="relative group">
                   <Clock className="h-4 w-4 text-blue-500" />
-                  <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                  <div className="absolute right-0 top-full mt-1 w-64 p-2 bg-black text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
                     {language === "en"
-                      ? `Attendance (${attendancePercentage}%) is below threshold`
-                      : `Aanwezigheid (${attendancePercentage}%) is onder de grenswaarde`}
+                      ? `Attendance (${attendancePercentage}%) is below threshold (${attendanceThreshold}%)`
+                      : `Aanwezigheid (${attendancePercentage}%) is onder de grenswaarde (${attendanceThreshold}%)`}
                   </div>
                 </div>
               )}

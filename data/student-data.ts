@@ -492,6 +492,9 @@ export const hasLowAttendance = (studentName: string, threshold = 85) => {
 
 // Add this function to get consistent individual goal data for a student
 export const getStudentIndividualGoal = (studentName: string) => {
+  // Default goal
+  const defaultGoal = 60
+
   // In a real implementation, this would fetch from the database
   // For now, we'll generate consistent data based on the student name
 

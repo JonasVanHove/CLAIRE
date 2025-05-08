@@ -311,7 +311,7 @@ function DashboardContent() {
 
   // Update individual goal when selected student changes
   useEffect(() => {
-    setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+    setIndividualGoal(60) // Default to 60% instead of using getStudentIndividualGoal
   }, [selectedStudent])
 
   // Replace the semesterScores useMemo with API calls
@@ -854,7 +854,7 @@ function DashboardContent() {
 
   // Add state for global thresholds
   const [globalAttendanceThreshold, setGlobalAttendanceThreshold] = useState(85)
-  const [globalIndividualGoal, setGlobalIndividualGoal] = useState(70)
+  const [globalIndividualGoal, setGlobalIndividualGoal] = useState(60)
 
   // Update the loadThresholdsFromDB function to load from student profile
   const loadThresholdsFromDB = async () => {
@@ -862,8 +862,10 @@ function DashboardContent() {
 
     setIsLoadingThresholds(true)
     try {
-      // Try to load from localStorage first (our mock database)
+      // Load from localStorage first (our mock database)
       const classThresholdsJSON = localStorage.getItem("classThresholds")
+      const globalAttendanceThresholdValue: string | null = localStorage.getItem("globalAttendanceThreshold")
+
       if (classThresholdsJSON) {
         const classThresholds = JSON.parse(classThresholdsJSON)
 
@@ -926,7 +928,6 @@ function DashboardContent() {
         } else {
           // Fall back to legacy storage if global parameters not found
           // Declare globalAttendanceThresholdValue before using it
-          const globalAttendanceThresholdValue: string | null = localStorage.getItem("globalAttendanceThreshold")
           if (globalAttendanceThresholdValue) {
             setGlobalAttendanceThreshold(Number(globalAttendanceThresholdValue))
             if (!classThresholdsJSON) {
@@ -938,9 +939,9 @@ function DashboardContent() {
         console.error("Error loading global parameters:", error)
       }
 
-      // If nothing in localStorage, fall back to the default values from the data
-      if (!globalAttendanceThresholdValue && !classThresholdsJSON) {
-        setAttendanceThreshold(85) // Default attendance threshold
+      // If nothing in localStorage, fall back to the default values
+      if (!classThresholdsJSON) {
+        setAttendanceThreshold(80) // Default attendance threshold is now 80%
       }
     } catch (error) {
       console.error("Error loading thresholds from database:", error)
@@ -1330,9 +1331,7 @@ function DashboardContent() {
                                     </div>
                                     <div className="text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-1">
                                       <span className="w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-                                      {language === "en"
-                                        ? `Global goal threshold: ${globalIndividualGoal}%`
-                                        : `Globale doeldrempel: ${globalIndividualGoal}%`}
+                                      {language === "en" ? `Global goal threshold: 60%` : `Globale doeldrempel: 60%`}
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
                                       {language === "en"

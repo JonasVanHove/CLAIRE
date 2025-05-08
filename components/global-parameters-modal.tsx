@@ -18,6 +18,8 @@ interface ClassThresholds {
   hasCustomAttendanceThresholds?: boolean
 }
 
+const classThresholds: ClassThresholds[] = []
+
 // Enhanced API object with database storage simulation
 const api = {
   // Simulate database storage using localStorage
@@ -61,10 +63,6 @@ const api = {
       // Retrieve global thresholds
       const globalAttendanceThreshold = localStorage.getItem("globalAttendanceThreshold")
       const globalIndividualGoal = localStorage.getItem("globalIndividualGoal")
-
-      // Retrieve class-specific thresholds
-      const classThresholdsJSON = localStorage.getItem("classThresholds")
-      const classThresholds = classThresholdsJSON ? JSON.parse(classThresholdsJSON) : []
 
       // Simulate network delay
       await new Promise((resolve) => setTimeout(resolve, 300))
@@ -489,7 +487,7 @@ export function GlobalParametersModal({ onClose, language }: GlobalParametersMod
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 opacity-50 pointer-events-none">
               {/* Global Values */}
               <div className="grid grid-cols-2 gap-6 mb-6">
                 {/* Attendance Threshold */}
