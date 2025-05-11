@@ -126,6 +126,27 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
   // Get translations based on current language
   const t = translations[language]
 
+  useEffect(() => {
+    if (selectedStudent) {
+      // Dispatch an event with the student's status information
+      // This will be used by the student-selector to update its UI
+      const statusEvent = new CustomEvent("updateStudentStatus", {
+        detail: {
+          student: selectedStudent,
+          isAtRisk: isAtRisk,
+          atRiskReason:
+            language === "en"
+              ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
+              : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`,
+          attendancePercentage: attendanceData.present,
+          attendanceThreshold: attendanceThreshold,
+          isBelowAttendanceThreshold: attendanceData.present < attendanceThreshold,
+        },
+      })
+      window.dispatchEvent(statusEvent)
+    }
+  }, [selectedStudent, isAtRisk, percentage, individualGoal, attendanceData.present, attendanceThreshold, language])
+
   return (
     <div className="mb-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-2">
@@ -245,9 +266,9 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
 
       {/* Semester Competencies Section */}
       {selectedStudent && (
-        <div className="mt-2 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2">
-          <div className="text-sm font-medium mb-1 dark:text-gray-200 text-center">{t.competenciesPerSemester}</div>
-          <div className="flex items-center justify-between gap-2">
+        <div className="mt-2 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-3">
+          <div className="text-sm font-medium mb-2 dark:text-gray-200 text-center">{t.competenciesPerSemester}</div>
+          <div className="flex items-center justify-between gap-3">
             {semesterCompetencies.map((semData, index) => {
               // Calculate cumulative achievements
               const previousSemesters = semesterCompetencies.slice(0, index)
@@ -259,18 +280,17 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
               const cumulativePercentage = (cumulativeAchieved / totalScale) * 100
               const currentSemesterPercentage = (semData.achieved / totalScale) * 100
 
-              // Define colors for each semester with the specified hex values
-              // Define gradient colors for each semester
+              // Define gradient colors for each semester with enhanced visual appeal
               const semesterGradients = [
-                ["#6b6770", "#4b4750"], // Semester 1: darker to lighter purple-gray
-                ["#b3acbc", "#93889c"], // Semester 2: darker to lighter lavender
-                ["#3a383c", "#1a181c"], // Semester 3: darker to lighter dark gray
+                ["#2c3e50", "#34495e"], // Semester 1: donkerblauw gradient
+                ["#3498db", "#2980b9"], // Semester 2: middenblauw gradient
+                ["#85c1e9", "#5dade2"], // Semester 3: lichtblauw gradient
               ]
 
               return (
-                <div key={semData.semester} className="flex-1">
-                  <div className="flex justify-between text-xs mb-0.5">
-                    <span className="dark:text-gray-300">
+                <div key={semData.semester} className="flex-1 group relative">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium dark:text-gray-300">
                       {t.semester}
                       {semData.semester}
                     </span>
@@ -278,7 +298,7 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
                       {cumulativeAchieved}/{totalScale}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                  <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative shadow-inner">
                     {/* Show previous semesters' contributions */}
                     {previousSemesters.map((prevSem, prevIndex) => {
                       const prevPercentage = (prevSem.achieved / totalScale) * 100
@@ -289,7 +309,7 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
                       return (
                         <div
                           key={`prev-${prevSem.semester}`}
-                          className="absolute h-full"
+                          className="absolute h-full transition-all duration-300"
                           style={{
                             width: `${prevPercentage}%`,
                             left: `${prevOffset}%`,
@@ -301,7 +321,7 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
 
                     {/* Show current semester's contribution */}
                     <div
-                      className="absolute h-full"
+                      className="absolute h-full transition-all duration-300"
                       style={{
                         width: `${currentSemesterPercentage}%`,
                         left: `${cumulativePercentage - currentSemesterPercentage}%`,
@@ -309,6 +329,49 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
                       }}
                     />
                   </div>
+
+                  {/* Tooltip showing semester details */}
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-48 p-2 bg-black/90 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50 pointer-events-none">
+                    <p className="font-medium mb-1">
+                      {language === "en" ? `Semester ${semData.semester}` : `Semester ${semData.semester}`}
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                      <span>{language === "en" ? "This semester" : "Dit semester"}:</span>
+                      <span className="text-right">
+                        {semData.achieved} ({currentSemesterPercentage.toFixed(1)}%)
+                      </span>
+                      <span>{language === "en" ? "Cumulative" : "Cumulatief"}:</span>
+                      <span className="text-right">
+                        {cumulativeAchieved} ({cumulativePercentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Legend for semester colors */}
+          <div className="flex justify-center mt-2 gap-3 text-xs">
+            {semesterCompetencies.map((semData, index) => {
+              const semesterGradients = [
+                ["#2c3e50", "#34495e"], // Semester 1: donkerblauw
+                ["#3498db", "#2980b9"], // Semester 2: middenblauw
+                ["#85c1e9", "#5dade2"], // Semester 3: lichtblauw
+              ]
+
+              return (
+                <div key={`legend-${semData.semester}`} className="flex items-center">
+                  <div
+                    className="w-3 h-3 rounded-full mr-1"
+                    style={{
+                      background: `linear-gradient(to right, ${semesterGradients[index][0]}, ${semesterGradients[index][1]})`,
+                    }}
+                  ></div>
+                  <span className="dark:text-gray-300">
+                    {t.semester}
+                    {semData.semester}
+                  </span>
                 </div>
               )
             })}

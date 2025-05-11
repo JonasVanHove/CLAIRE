@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { useUI } from "@/contexts/ui-context"
 
@@ -19,12 +17,6 @@ interface ScatterPlotProps {
 export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { darkMode, language } = useUI()
-  const [tooltip, setTooltip] = useState<{ show: boolean; text: string; x: number; y: number }>({
-    show: false,
-    text: "",
-    x: 0,
-    y: 0,
-  })
 
   // Store the current student dot position for hover detection
   const currentStudentDotRef = useRef<{ x: number; y: number; radius: number; name: string } | null>(null)
@@ -229,67 +221,16 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
     })
   }, [data, darkMode])
 
-  // Handle mouse move for tooltip
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current || !currentStudentDotRef.current) {
-      setTooltip({ show: false, text: "", x: 0, y: 0 })
-      return
-    }
-
-    const rect = canvasRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    // Calculate distance from mouse to dot center
-    const dx = x - currentStudentDotRef.current.x
-    const dy = y - currentStudentDotRef.current.y
-    const distance = Math.sqrt(dx * dx + dy * dy)
-
-    // Show tooltip if mouse is over the dot
-    if (distance <= currentStudentDotRef.current.radius) {
-      setTooltip({
-        show: true,
-        text: currentStudentDotRef.current.name,
-        x: e.clientX,
-        y: e.clientY,
-      })
-    } else {
-      setTooltip({ show: false, text: "", x: 0, y: 0 })
-    }
-  }
-
-  // Handle mouse leave
-  const handleMouseLeave = () => {
-    setTooltip({ show: false, text: "", x: 0, y: 0 })
-  }
-
   return (
-    <Card className="flex p-2 dark:bg-gray-800 dark:border-gray-700 relative">
-      <div className="flex items-center justify-center mr-2 min-w-[20px]">
-        <div className="text-xs font-semibold tracking-wide dark:text-gray-100 text-gray-700 transform -rotate-90 whitespace-nowrap origin-center py-2">
+    <Card className="flex flex-col md:flex-row p-3 dark:bg-gray-800 dark:border-gray-700 relative h-full">
+      <div className="flex items-center justify-center mb-2 md:mb-0 md:mr-3 md:min-w-[20px]">
+        <div className="text-xs font-semibold tracking-wide dark:text-gray-100 text-gray-700 md:transform md:-rotate-90 md:whitespace-nowrap md:origin-center py-2">
           {getTranslatedTitle()}
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={240}
-        height={120}
-        className="flex-1 h-auto max-w-full"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-      />
-      {tooltip.show && (
-        <div
-          className="absolute z-10 px-2 py-1 text-xs font-medium text-white bg-gray-800 rounded shadow-lg pointer-events-none animate-in fade-in duration-200"
-          style={{
-            left: `${tooltip.x}px`,
-            top: `${tooltip.y - 30}px`,
-            transform: "translateX(-50%)",
-          }}
-        >
-          {tooltip.text}
-        </div>
-      )}
+      <div className="flex-1 flex items-center justify-center">
+        <canvas ref={canvasRef} width={400} height={300} className="w-full h-full" />
+      </div>
     </Card>
   )
 }

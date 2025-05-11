@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // Voeg imports toe voor de ChevronDown en ChevronUp iconen
 import { ChevronDown, User, FileText, Calendar, CheckCircle2, XCircle, AlertTriangle, ChevronUp } from "lucide-react"
 // Voeg deze imports toe bovenaan het bestand, bij de andere imports
-import { ArrowDown, ArrowUp, ArrowUpDown, Clock, Activity, BarChart3 } from "lucide-react"
+import { ArrowDown, ArrowUp, Clock, Activity, BarChart3 } from "lucide-react"
 import { SemesterScatterPlot } from "@/components/semester-scatter-plot"
 import { useStudent } from "@/contexts/student-context"
 import { useMemo, useState, useRef, useEffect } from "react"
@@ -67,7 +67,7 @@ export default function Dashboard() {
 
 // Add translations object inside the DashboardContent component
 function DashboardContent() {
-  const { selectedStudent, selectedClass } = useStudent()
+  const { selectedStudent, selectedClass, setStudentData } = useStudent()
   // Verander deze regels:
   // const [showNotes, setShowProfile] = useState(false)
   // const [showProfile, setShowNotes] = useState(false)
@@ -173,7 +173,7 @@ function DashboardContent() {
       activities: "Activities",
       hoursPerWeek: "Hours per week",
       ascending: "Ascending",
-      descending: "Descending",
+      descending: "Enrollment History",
       enrollmentHistory: "Years enrolled at this school",
       years: "years",
       numberOfYears: "Number of years",
@@ -381,16 +381,17 @@ function DashboardContent() {
     return hoursMap[subject] || Math.floor(Math.random() * 4) + 1 // Fallback naar random 1-4 uren
   }
 
+  // Wijzig de handleSortChange functie om alleen het veld te wijzigen, niet de richting
   // Voeg deze functie toe in de DashboardContent functie, voor de renderSemester functie
   // Functie om de sorteervolgorde te wijzigen
   const handleSortChange = (field: "score" | "activities" | "hours") => {
     setSortOption((prev) => {
-      // Als hetzelfde veld wordt geselecteerd, wissel dan de richting
-      if (prev.field === field) {
-        return { field, direction: prev.direction === "asc" ? "desc" : "asc" }
+      // Als een nieuw veld wordt geselecteerd, behoud de huidige richting
+      if (prev.field !== field) {
+        return { field, direction: prev.direction }
       }
-      // Anders, nieuw veld met standaard aflopende sortering
-      return { field, direction: "desc" }
+      // Als hetzelfde veld wordt geselecteerd, behoud alles
+      return prev
     })
   }
 
@@ -551,23 +552,6 @@ function DashboardContent() {
       return sortOption.direction === "asc" ? comparison : -comparison
     })
 
-    // Helper functie om het actieve sorteerveld te markeren
-    const getSortButtonClass = (field: "score" | "activities" | "hours") => {
-      return `px-2 py-1 text-xs rounded-md flex items-center gap-1 ${
-        sortOption.field === field
-          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium"
-          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-      }`
-    }
-
-    // Helper functie om het juiste icoon te tonen voor het sorteerveld
-    const getSortIcon = (field: "score" | "activities" | "hours") => {
-      if (sortOption.field !== field) {
-        return <ArrowUpDown className="h-3 w-3" />
-      }
-      return sortOption.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-    }
-
     return (
       <div
         className={`border rounded-md flex-1 dark:bg-gray-800 dark:border-gray-700 relative p-3 ${
@@ -588,68 +572,10 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Sorteer controls */}
-        <div className="mb-3 flex justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
-                <ArrowUpDown className="h-3.5 w-3.5" />
-                <span>
-                  {t.sortBy}: {t[sortOption.field]}
-                </span>
-                <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 animate-in fade-in zoom-in-95 duration-200">
-              <DropdownMenuLabel>{t.sortBy}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex justify-between items-center" onClick={() => handleSortChange("score")}>
-                <div className="flex items-center gap-1.5">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  <span>{t.score}</span>
-                </div>
-                {sortOption.field === "score" &&
-                  (sortOption.direction === "asc" ? (
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  ))}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex justify-between items-center"
-                onClick={() => handleSortChange("activities")}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Activity className="h-3.5 w-3.5" />
-                  <span>{t.activities}</span>
-                </div>
-                {sortOption.field === "activities" &&
-                  (sortOption.direction === "asc" ? (
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  ))}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex justify-between items-center" onClick={() => handleSortChange("hours")}>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>{t.hoursPerWeek}</span>
-                </div>
-                {sortOption.field === "hours" &&
-                  (sortOption.direction === "asc" ? (
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  ))}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
         <div
           className={`grid grid-cols-1 md:grid-cols-2 gap-3 custom-scrollbar`}
           style={{
-            height: "calc(100% - 30px)", // Verminder de hoogte om ruimte te maken voor de sorteercontrols
+            height: "calc(100% - 10px)", // Verminder de hoogte om ruimte te maken voor de sorteercontrols
             overflowY: "auto", // Enable vertical scrolling
             paddingRight: "8px", // Add some padding for the scrollbar
           }}
@@ -678,7 +604,7 @@ function DashboardContent() {
 
   // Replace the handleSaveAttendanceThreshold function with API call
   const handleSaveAttendanceThreshold = async () => {
-    if (!thresholdInputRef.current) return
+    if (!thresholdInputRef.current || !selectedStudent) return
 
     const newThreshold = Number.parseInt(thresholdInputRef.current.value)
     if (isNaN(newThreshold) || newThreshold < 50 || newThreshold > 100) {
@@ -696,31 +622,24 @@ function DashboardContent() {
         // Update local state after successful save
         setAttendanceThreshold(newThreshold)
 
-        // Also update the class threshold in localStorage
+        // Save to student profile in localStorage instead of class thresholds
         try {
-          const classThresholdsJSON = localStorage.getItem("classThresholds")
-          const classThresholds = classThresholdsJSON ? JSON.parse(classThresholdsJSON) : []
+          // Get existing student profiles or initialize empty object
+          const studentProfilesJSON = localStorage.getItem("studentProfiles")
+          const studentProfiles = studentProfilesJSON ? JSON.parse(studentProfilesJSON) : {}
 
-          // Find if this class already has thresholds
-          const classIndex = classThresholds.findIndex((cls: any) => cls.className === selectedClass)
-
-          if (classIndex >= 0) {
-            // Update existing class threshold
-            classThresholds[classIndex].attendanceThreshold = newThreshold
-          } else {
-            // Add new class threshold
-            classThresholds.push({
-              className: selectedClass,
-              attendanceThreshold: newThreshold,
-              individualGoal: individualGoal,
-              useGlobal: false,
-            })
+          // Update or create this student's profile
+          studentProfiles[selectedStudent] = {
+            ...(studentProfiles[selectedStudent] || {}),
+            attendanceThreshold: newThreshold,
           }
 
           // Save back to localStorage
-          localStorage.setItem("classThresholds", JSON.stringify(classThresholds))
+          localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+
+          console.log(`Saved attendance threshold ${newThreshold}% for student: ${selectedStudent}`)
         } catch (error) {
-          console.error("Error updating class threshold in localStorage:", error)
+          console.error("Error updating student profile in localStorage:", error)
         }
 
         // Show success message
@@ -807,7 +726,7 @@ function DashboardContent() {
 
   // Add event listener to handle threshold updates and refresh student data
   const [isLoadingStudentData, setIsLoadingStudentData] = useState(false)
-  const { setStudentData } = useStudent() // Remove fetchStudentData as it doesn't exist
+  // const { setStudentData } = useStudent() // Remove fetchStudentData as it doesn't exist
 
   useEffect(() => {
     // Function to handle the refresh event
@@ -862,22 +781,24 @@ function DashboardContent() {
 
     setIsLoadingThresholds(true)
     try {
-      // Load from localStorage first (our mock database)
+      // Load global and class thresholds first
       const classThresholdsJSON = localStorage.getItem("classThresholds")
-      const globalAttendanceThresholdValue: string | null = localStorage.getItem("globalAttendanceThreshold")
+      const globalAttendanceThresholdValue = localStorage.getItem("globalAttendanceThreshold")
+
+      let classThreshold = 80 // Default value
 
       if (classThresholdsJSON) {
         const classThresholds = JSON.parse(classThresholdsJSON)
 
         // Find the thresholds for the current class
-        const classThreshold = classThresholds.find((cls: any) => cls.className === selectedClass)
+        const classThresholdObj = classThresholds.find((cls: any) => cls.className === selectedClass)
 
-        if (classThreshold) {
+        if (classThresholdObj) {
           // Use the class-specific attendance threshold
-          setAttendanceThreshold(classThreshold.attendanceThreshold)
+          classThreshold = classThresholdObj.attendanceThreshold
           console.log(
             `Loaded attendance threshold for ${selectedClass} from database:`,
-            classThreshold.attendanceThreshold,
+            classThresholdObj.attendanceThreshold,
           )
         }
 
@@ -889,11 +810,28 @@ function DashboardContent() {
         }
       }
 
-      // Load individual goal from student profile if available
+      // Now check if the selected student has a custom threshold
       if (selectedStudent) {
         const studentProfilesJSON = localStorage.getItem("studentProfiles")
         if (studentProfilesJSON) {
           const studentProfiles = JSON.parse(studentProfilesJSON)
+
+          if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].attendanceThreshold) {
+            // Use student-specific threshold if available
+            setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
+            console.log(
+              `Loaded student-specific attendance threshold for ${selectedStudent}:`,
+              studentProfiles[selectedStudent].attendanceThreshold,
+            )
+          } else {
+            // If no student-specific threshold, use class threshold
+            setAttendanceThreshold(classThreshold)
+            console.log(
+              `No student-specific threshold found for ${selectedStudent}, using class threshold: ${classThreshold}`,
+            )
+          }
+
+          // Load individual goal from student profile if available
           if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].individualGoal) {
             setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
             console.log(
@@ -905,9 +843,13 @@ function DashboardContent() {
             setIndividualGoal(getStudentIndividualGoal(selectedStudent))
           }
         } else {
-          // If no profiles exist, fall back to the default from data
+          // If no profiles exist, use class threshold and default individual goal
+          setAttendanceThreshold(classThreshold)
           setIndividualGoal(getStudentIndividualGoal(selectedStudent))
         }
+      } else {
+        // If no student selected, use class threshold
+        setAttendanceThreshold(classThreshold)
       }
 
       // Load global parameters for attendance threshold
@@ -919,29 +861,13 @@ function DashboardContent() {
           if (globalParams.attendanceThreshold) {
             setGlobalAttendanceThreshold(Number(globalParams.attendanceThreshold))
             console.log("Loaded global attendance threshold from Global Parameters:", globalParams.attendanceThreshold)
-
-            // If no class-specific threshold is set, use the global one
-            if (!classThresholdsJSON) {
-              setAttendanceThreshold(Number(globalParams.attendanceThreshold))
-            }
           }
-        } else {
+        } else if (globalAttendanceThresholdValue) {
           // Fall back to legacy storage if global parameters not found
-          // Declare globalAttendanceThresholdValue before using it
-          if (globalAttendanceThresholdValue) {
-            setGlobalAttendanceThreshold(Number(globalAttendanceThresholdValue))
-            if (!classThresholdsJSON) {
-              setAttendanceThreshold(Number(globalAttendanceThresholdValue))
-            }
-          }
+          setGlobalAttendanceThreshold(Number(globalAttendanceThresholdValue))
         }
       } catch (error) {
         console.error("Error loading global parameters:", error)
-      }
-
-      // If nothing in localStorage, fall back to the default values
-      if (!classThresholdsJSON) {
-        setAttendanceThreshold(80) // Default attendance threshold is now 80%
       }
     } catch (error) {
       console.error("Error loading thresholds from database:", error)
@@ -954,6 +880,49 @@ function DashboardContent() {
       setIsLoadingThresholds(false)
     }
   }
+
+  // Add this useEffect to reset thresholds when the selected student changes
+  useEffect(() => {
+    if (selectedStudent) {
+      // Reset loading state
+      setIsLoadingThresholds(true)
+
+      // Load student-specific thresholds
+      const studentProfilesJSON = localStorage.getItem("studentProfiles")
+      if (studentProfilesJSON) {
+        const studentProfiles = JSON.parse(studentProfilesJSON)
+
+        if (studentProfiles[selectedStudent]) {
+          // Load student-specific attendance threshold if available
+          if (studentProfiles[selectedStudent].attendanceThreshold) {
+            setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
+            console.log(
+              `Loaded student-specific attendance threshold for ${selectedStudent}:`,
+              studentProfiles[selectedStudent].attendanceThreshold,
+            )
+          } else {
+            // Otherwise load from class or global settings
+            loadThresholdsFromDB()
+          }
+
+          // Load student-specific individual goal if available
+          if (studentProfiles[selectedStudent].individualGoal) {
+            setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
+          } else {
+            setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+          }
+        } else {
+          // If no profile exists for this student, load from class or global settings
+          loadThresholdsFromDB()
+        }
+      } else {
+        // If no profiles exist, load from class or global settings
+        loadThresholdsFromDB()
+      }
+
+      setIsLoadingThresholds(false)
+    }
+  }, [selectedStudent])
 
   // Update the useEffect that loads thresholds to use the new function
   useEffect(() => {
@@ -973,6 +942,33 @@ function DashboardContent() {
 
   // Find this code in the individual goal section:
   // Replace with:
+
+  // Function to check if attendance is below threshold - used by both profile and student filter
+  const isAttendanceBelowThreshold = (attendance: number, threshold: number) => {
+    return attendance < threshold
+  }
+
+  // Verbeter de event emitter voor attendance data
+  // Vervang de bestaande useEffect voor het verzenden van attendance data:
+
+  // Emit a custom event to update the student filter with attendance data
+  useEffect(() => {
+    if (selectedStudent && attendanceData) {
+      // Check if attendance is below threshold
+      const isBelow = attendanceData.present < attendanceThreshold
+
+      // Create and dispatch a custom event with the attendance data
+      const event = new CustomEvent("updateStudentAttendance", {
+        detail: {
+          student: selectedStudent,
+          attendancePercentage: attendanceData.present,
+          isBelowThreshold: isBelow,
+          threshold: attendanceThreshold,
+        },
+      })
+      window.dispatchEvent(event)
+    }
+  }, [selectedStudent, attendanceData, attendanceThreshold])
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -1022,6 +1018,10 @@ function DashboardContent() {
                               width={80}
                               height={80}
                               className="object-cover"
+                              onError={(e) => {
+                                // Als de afbeelding niet kan worden geladen, gebruik dan de standaard afbeelding
+                                ;(e.target as HTMLImageElement).src = "/images/profiles/default.png"
+                              }}
                             />
                           </div>
                           <div className="absolute -bottom-1 -right-1 flex space-x-1">
@@ -1035,6 +1035,7 @@ function DashboardContent() {
                                 </div>
                               </div>
                             )}
+                            {/* Attendance risk icon - also shown in student filter when attendance is below threshold */}
                             {attendanceData && attendanceData.present < attendanceThreshold && (
                               <div className="bg-blue-100 dark:bg-blue-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
                                 <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
@@ -1098,61 +1099,20 @@ function DashboardContent() {
                     </div>
 
                     {/* Settings sections */}
+                    {/* Settings sections - Simplified */}
                     <div className="space-y-4">
                       {/* Attendance threshold setting */}
-                      <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50/50 to-blue-100/30 dark:from-blue-900/10 dark:to-blue-800/20">
-                        <div className="flex items-center justify-between">
+                      <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-1 h-8 rounded-full bg-blue-400 dark:bg-blue-500"></div>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                              <div>
-                                <label
-                                  htmlFor="attendance-threshold"
-                                  className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                                >
-                                  {t.attendanceThreshold.replace(":", "")}
-                                </label>
-                                {isLoadingThresholds ? (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-                                    <svg
-                                      className="animate-spin h-3 w-3"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      ></circle>
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      ></path>
-                                    </svg>
-                                    <span>{language === "en" ? "Loading..." : "Laden..."}</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col gap-1 mt-0.5">
-                                    <div className="text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-1">
-                                      <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500"></span>
-                                      {language === "en"
-                                        ? `Global class threshold: ${globalAttendanceThreshold}%`
-                                        : `Globale klasdrempel: ${globalAttendanceThreshold}%`}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      {language === "en"
-                                        ? `Individual threshold: ${attendanceThreshold}%`
-                                        : `Individuele drempel: ${attendanceThreshold}%`}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
+                            <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                            <div>
+                              <label
+                                htmlFor="attendance-threshold"
+                                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                {t.attendanceThreshold.replace(":", "")}
+                              </label>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1170,17 +1130,15 @@ function DashboardContent() {
                             </div>
                             <button
                               className={`px-2 py-1 text-xs ${
-                                isSaving
-                                  ? "bg-gray-400"
-                                  : "bg-blue-100 hover:bg-blue-200 dark:bg-blue-800/30 dark:hover:bg-blue-700/40"
-                              } text-gray-700 dark:text-gray-200 rounded-md border border-gray-300 dark:border-gray-600 flex items-center gap-1 shadow-sm transition-all duration-200`}
+                                isSaving ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600 text-white"
+                              } rounded-md flex items-center gap-1 shadow-sm transition-all duration-200`}
                               disabled={isSaving}
                               onClick={handleSaveAttendanceThreshold}
                             >
                               {isSaving ? (
                                 <>
                                   <svg
-                                    className="animate-spin -ml-1 mr-2 h-3 w-3 text-white"
+                                    className="animate-spin h-3 w-3 text-white"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"
@@ -1207,39 +1165,15 @@ function DashboardContent() {
                             </button>
                           </div>
                         </div>
-                        <div className="flex items-center mt-2">
-                          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-                            {/* Huidige aanwezigheid van de leerling */}
-                            <div
-                              className={`h-full ${
-                                attendanceData && attendanceData.present < attendanceThreshold
-                                  ? "bg-red-400 dark:bg-red-500"
-                                  : "bg-green-400 dark:bg-green-500"
-                              }`}
-                              style={{
-                                width: `${attendanceData && typeof attendanceData.present === "number" ? attendanceData.present : 0}%`,
-                              }}
-                            ></div>
-                            {/* Drempelwaarde markering - individueel */}
-                            <div
-                              className="absolute top-0 bottom-0 w-0.5 bg-blue-600 dark:bg-blue-400 z-10"
-                              style={{ left: `${attendanceThreshold}%` }}
-                            >
-                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></div>
-                            </div>
-                            {/* Drempelwaarde markering - klas */}
-                            {globalAttendanceThreshold !== attendanceThreshold && (
-                              <div
-                                className="absolute top-0 bottom-0 w-0.5 bg-blue-300 dark:bg-blue-600 z-10 dashed-line"
-                                style={{ left: `${globalAttendanceThreshold}%` }}
-                              >
-                                <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-300 dark:bg-blue-600"></div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-2 flex items-center gap-2 text-xs">
+
+                        {/* Info row */}
+                        <div className="flex items-center justify-between mb-2 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {language === "en" ? "Current:" : "Huidig:"}
+                            </span>
                             <span
-                              className={`${
+                              className={`font-medium ${
                                 attendanceData && attendanceData.present < attendanceThreshold
                                   ? "text-red-500 dark:text-red-400"
                                   : "text-green-500 dark:text-green-400"
@@ -1250,97 +1184,68 @@ function DashboardContent() {
                                 : 0}
                               %
                             </span>
-                            <span className="text-gray-400 dark:text-gray-500">|</span>
-                            <span className="text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span>
-                            {globalAttendanceThreshold !== attendanceThreshold && (
-                              <>
-                                <span className="text-gray-400 dark:text-gray-500">|</span>
-                                <span className="text-blue-300 dark:text-blue-600">{globalAttendanceThreshold}%</span>
-                              </>
-                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {language === "en" ? "Individual:" : "Individueel:"}
+                            </span>
+                            <User className="h-3 w-3 text-blue-500 dark:text-blue-400 mr-0.5" />
+                            <span className="font-medium text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {language === "en" ? "Class goal:" : "Klasdoel:"}
+                            </span>
+                            <span className="font-medium text-blue-500 dark:text-blue-400">
+                              {globalAttendanceThreshold}%
+                            </span>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-3">
-                          <div className="flex items-center gap-1">
-                            <span
-                              className={`inline-block w-2 h-2 rounded-full ${
-                                attendanceData && attendanceData.present < attendanceThreshold
-                                  ? "bg-red-400 dark:bg-red-500"
-                                  : "bg-green-400 dark:bg-green-500"
-                              }`}
-                            ></span>
-                            <span>Huidige aanwezigheid</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="inline-block w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-500"></span>
-                            <span>{language === "en" ? "Individual threshold" : "Individuele drempel"}</span>
+
+                        {/* Progress bar with gradient */}
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                          {/* Current attendance with gradient */}
+                          <div
+                            className={`h-full ${
+                              attendanceData && attendanceData.present < attendanceThreshold
+                                ? "bg-gradient-to-r from-red-400 to-red-500 dark:from-red-600 dark:to-red-500"
+                                : "bg-gradient-to-r from-green-400 to-green-500 dark:from-green-600 dark:to-green-500"
+                            }`}
+                            style={{
+                              width: `${attendanceData && typeof attendanceData.present === "number" ? attendanceData.present : 0}%`,
+                            }}
+                          ></div>
+
+                          {/* Threshold markers */}
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-blue-600 dark:bg-blue-400 z-10"
+                            style={{ left: `${attendanceThreshold}%` }}
+                          >
+                            <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></div>
                           </div>
                           {globalAttendanceThreshold !== attendanceThreshold && (
-                            <div className="flex items-center gap-1">
-                              <span className="inline-block w-2 h-2 rounded-full bg-blue-300 dark:bg-blue-600"></span>
-                              <span>{language === "en" ? "Class threshold" : "Klasdrempel"}</span>
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-blue-300 dark:bg-blue-600 z-10 dashed-line"
+                              style={{ left: `${globalAttendanceThreshold}%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-300 dark:bg-blue-600"></div>
                             </div>
                           )}
                         </div>
                       </div>
 
                       {/* Individual goal setting */}
-                      <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gradient-to-r from-amber-50/50 to-amber-100/30 dark:from-amber-900/10 dark:to-amber-800/20">
-                        <div className="flex items-center justify-between">
+                      <div className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="w-1 h-8 rounded-full bg-amber-400 dark:bg-amber-500"></div>
-                            <div className="flex items-center gap-1.5">
-                              <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                              <div>
-                                <label
-                                  htmlFor="individual-goal"
-                                  className="text-xs font-medium text-gray-700 dark:text-gray-300"
-                                >
-                                  {t.individualGoal.replace(":", "")}
-                                </label>
-                                {isLoadingThresholds ? (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
-                                    <svg
-                                      className="animate-spin h-3 w-3"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      ></circle>
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      ></path>
-                                    </svg>
-                                    <span>{language === "en" ? "Loading..." : "Laden..."}</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col gap-1 mt-0.5">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      {language === "en"
-                                        ? `Personal goal for ${selectedStudent}`
-                                        : `Persoonlijke doelstelling voor ${selectedStudent}`}
-                                    </div>
-                                    <div className="text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded inline-flex items-center gap-1 mt-1">
-                                      <span className="w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-                                      {language === "en" ? `Global goal threshold: 60%` : `Globale doeldrempel: 60%`}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      {language === "en"
-                                        ? `Individual goal: ${individualGoal}%`
-                                        : `Individuele doelstelling: ${individualGoal}%`}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
+                            <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                            <div>
+                              <label
+                                htmlFor="individual-goal"
+                                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                              >
+                                {t.individualGoal.replace(":", "")}
+                              </label>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1358,17 +1263,15 @@ function DashboardContent() {
                             </div>
                             <button
                               className={`px-2 py-1 text-xs ${
-                                isSavingGoal
-                                  ? "bg-gray-400"
-                                  : "bg-amber-100 hover:bg-amber-200 dark:bg-amber-800/30 dark:hover:bg-amber-700/40"
-                              } text-gray-700 dark:text-gray-200 rounded-md border border-gray-300 dark:border-gray-600 flex items-center gap-1 shadow-sm transition-all duration-200`}
+                                isSavingGoal ? "bg-gray-400" : "bg-amber-500 hover:bg-amber-600 text-white"
+                              } rounded-md flex items-center gap-1 shadow-sm transition-all duration-200`}
                               disabled={isSavingGoal}
                               onClick={handleSaveIndividualGoal}
                             >
                               {isSavingGoal ? (
                                 <>
                                   <svg
-                                    className="animate-spin -ml-1 mr-2 h-3 w-3 text-white"
+                                    className="animate-spin h-3 w-3 text-white"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"
@@ -1395,37 +1298,15 @@ function DashboardContent() {
                             </button>
                           </div>
                         </div>
-                        <div className="flex items-center mt-2">
-                          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-                            {/* Huidige competentiepercentage van de leerling */}
-                            <div
-                              className={`h-full ${
-                                percentage < individualGoal
-                                  ? "bg-red-400 dark:bg-red-500"
-                                  : "bg-green-400 dark:bg-green-500"
-                              }`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                            {/* Drempelwaarde markering - individueel */}
-                            <div
-                              className="absolute top-0 bottom-0 w-0.5 bg-amber-600 dark:bg-amber-400 z-10"
-                              style={{ left: `${individualGoal}%` }}
-                            >
-                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400"></div>
-                            </div>
-                            {/* Drempelwaarde markering - klas */}
-                            {globalIndividualGoal !== individualGoal && (
-                              <div
-                                className="absolute top-0 bottom-0 w-0.5 bg-amber-300 dark:bg-amber-600 z-10 dashed-line"
-                                style={{ left: `${globalIndividualGoal}%` }}
-                              >
-                                <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-300 dark:bg-amber-600"></div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-2 flex items-center gap-2 text-xs">
+
+                        {/* Info row */}
+                        <div className="flex items-center justify-between mb-2 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {language === "en" ? "Current:" : "Huidig:"}
+                            </span>
                             <span
-                              className={`${
+                              className={`font-medium ${
                                 percentage < individualGoal
                                   ? "text-red-500 dark:text-red-400"
                                   : "text-green-500 dark:text-green-400"
@@ -1433,35 +1314,49 @@ function DashboardContent() {
                             >
                               {percentage.toFixed(1)}%
                             </span>
-                            <span className="text-gray-400 dark:text-gray-500">|</span>
-                            <span className="text-amber-500 dark:text-amber-400">{individualGoal}%</span>
-                            {globalIndividualGoal !== individualGoal && (
-                              <>
-                                <span className="text-gray-400 dark:text-gray-500">|</span>
-                                <span className="text-amber-300 dark:text-amber-600">{globalIndividualGoal}%</span>
-                              </>
-                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {language === "en" ? "Individual:" : "Individueel:"}
+                            </span>
+                            <User className="h-3 w-3 text-amber-500 dark:text-amber-400 mr-0.5" />
+                            <span className="font-medium text-amber-500 dark:text-amber-400">{individualGoal}%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {language === "en" ? "Class goal:" : "Klasdoel:"}
+                            </span>
+                            <span className="font-medium text-amber-500 dark:text-amber-400">
+                              {globalIndividualGoal}%
+                            </span>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-3">
-                          <div className="flex items-center gap-1">
-                            <span
-                              className={`inline-block w-2 h-2 rounded-full ${
-                                percentage < individualGoal
-                                  ? "bg-red-400 dark:bg-red-500"
-                                  : "bg-green-400 dark:bg-green-500"
-                              }`}
-                            ></span>
-                            <span>Huidige competentie</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="inline-block w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500"></span>
-                            <span>{language === "en" ? "Individual goal" : "Individuele doelstelling"}</span>
+
+                        {/* Progress bar with gradient */}
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+                          {/* Current competency with gradient */}
+                          <div
+                            className={`h-full ${
+                              percentage < individualGoal
+                                ? "bg-gradient-to-r from-red-400 to-red-500 dark:from-red-600 dark:to-red-500"
+                                : "bg-gradient-to-r from-green-400 to-green-500 dark:from-green-600 dark:to-green-500"
+                            }`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+
+                          {/* Goal markers */}
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-amber-600 dark:bg-amber-400 z-10"
+                            style={{ left: `${individualGoal}%` }}
+                          >
+                            <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400"></div>
                           </div>
                           {globalIndividualGoal !== individualGoal && (
-                            <div className="flex items-center gap-1">
-                              <span className="inline-block w-2 h-2 rounded-full bg-amber-300 dark:bg-amber-600"></span>
-                              <span>{language === "en" ? "Class goal" : "Klasdoelstelling"}</span>
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-amber-300 dark:bg-amber-600 z-10 dashed-line"
+                              style={{ left: `${globalIndividualGoal}%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-amber-300 dark:bg-amber-600"></div>
                             </div>
                           )}
                         </div>
@@ -1942,6 +1837,7 @@ function DashboardContent() {
           <div className="md:col-span-3">
             <div
               className={`grid grid-cols-1 ${compactView ? "md:grid-cols-1 lg:grid-cols-3" : "md:grid-cols-3"} gap-4`}
+              style={{ height: "300px", minHeight: "300px" }}
             >
               <SemesterScatterPlot title="Semester 1" data={semesterScores[0]} />
               <SemesterScatterPlot title="Semester 2" data={semesterScores[1]} />
@@ -1955,6 +1851,73 @@ function DashboardContent() {
 
         <div className="overflow-hidden">
           <Tabs defaultValue="semester1" className="w-full" onValueChange={setActiveSemester}>
+            <div className="flex justify-end mb-2">
+              <div className="flex items-center gap-2">
+                {/* Selector voor sorteerveld */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                      <span>
+                        {t.sortBy}: {t[sortOption.field]}
+                      </span>
+                      <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 animate-in fade-in zoom-in-95 duration-200">
+                    <DropdownMenuLabel>{t.sortBy}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="flex justify-between items-center"
+                      onClick={() => handleSortChange("score")}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <BarChart3 className="h-3.5 w-3.5" />
+                        <span>{t.score}</span>
+                      </div>
+                      {sortOption.field === "score" && <div className="h-2 w-2 rounded-full bg-blue-500"></div>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex justify-between items-center"
+                      onClick={() => handleSortChange("activities")}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Activity className="h-3.5 w-3.5" />
+                        <span>{t.activities}</span>
+                      </div>
+                      {sortOption.field === "activities" && <div className="h-2 w-2 rounded-full bg-blue-500"></div>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="flex justify-between items-center"
+                      onClick={() => handleSortChange("hours")}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{t.hoursPerWeek}</span>
+                      </div>
+                      {sortOption.field === "hours" && <div className="h-2 w-2 rounded-full bg-blue-500"></div>}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Selector voor sorteervolgorde */}
+                <button
+                  onClick={() => {
+                    setSortOption((prev) => ({
+                      ...prev,
+                      direction: prev.direction === "asc" ? "desc" : "asc",
+                    }))
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  title={sortOption.direction === "asc" ? t.ascending : t.descending}
+                >
+                  {sortOption.direction === "asc" ? (
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
             <TabsList className="grid grid-cols-3 mb-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border-0 p-1">
               <TabsTrigger
                 value="semester1"

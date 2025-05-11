@@ -9,7 +9,7 @@ interface ProfileImageProps {
 export function ProfileImage({ src, alt, className = "" }: ProfileImageProps) {
   return (
     <div className={`relative overflow-hidden rounded-full ${className}`}>
-      <Image src={src || "/placeholder.svg"} alt={alt} width={80} height={80} className="object-cover" />
+      <Image src={src || "/images/default.png"} alt={alt} width={80} height={80} className="object-cover" />
     </div>
   )
 }

@@ -238,7 +238,7 @@ export interface Student {
 }
 
 // Define unique student names for each class
-const studentsByClass = {
+export const studentsByClass = {
   "1Moderne": [
     { firstName: "Liam", lastName: "Janssens" },
     { firstName: "Olivia", lastName: "Peeters" },
@@ -277,6 +277,7 @@ const studentsByClass = {
     { firstName: "Wout", lastName: "Willems" },
     { firstName: "Amber", lastName: "Smets" },
     { firstName: "Jonas", lastName: "Verhaeghe" },
+    { firstName: "Xavier", lastName: "Waterslaeghers" },
   ],
   "3TW": [
     { firstName: "Lucas", lastName: "Dubois" },
@@ -348,7 +349,17 @@ const studentsByClass = {
     { firstName: "Paulien", lastName: "Vanhee" },
     { firstName: "Quinten", lastName: "Desmedt" },
   ],
-  "6WeWi": [
+  "6WeWi A": [
+    { firstName: "Nienke", lastName: "Martens" },
+    { firstName: "Amber", lastName: "Rosenberg" },
+    { firstName: "Fabian", lastName: "Ruitenburg" },
+    { firstName: "Patricia", lastName: "Soeters" },
+    { firstName: "Mick", lastName: "Zeelenberg" },
+    { firstName: "Mara", lastName: "Sabri" },
+    { firstName: "Appie", lastName: "Tayibi" },
+    { firstName: "Jeroen", lastName: "Cornelissen" },
+  ],
+  "6WeWi B": [
     { firstName: "Jelle", lastName: "Verstraete" },
     { firstName: "Lore", lastName: "Debruyne" },
     { firstName: "Mathias", lastName: "Vanhaverbeke" },
@@ -433,9 +444,24 @@ export const getTotalCompetencies = (studentName: string) => {
   return { achieved, total }
 }
 
+// Wijzig de getStudentProfileImage functie om automatisch te zoeken naar afbeeldingen op basis van de naam
 export const getStudentProfileImage = (studentName: string) => {
-  const statement = studentData.find((s) => s.actor.name === studentName)
-  return statement?.actor.profileImage || "/profile_placeholder.png"
+  if (!studentName) return "/images/profiles/default.png"
+
+  // Converteer de naam naar het juiste formaat voor de bestandsnaam (voornaam_achternaam.png)
+  const nameParts = studentName.split(" ")
+  if (nameParts.length < 2) return "/images/profiles/default.png"
+
+  const firstName = nameParts[0].toLowerCase()
+  const lastName = nameParts.slice(1).join("_").toLowerCase()
+  const imageFileName = `${firstName}_${lastName}.png`
+
+  // Probeer eerst de afbeelding in de standaard locatie te vinden
+  const imagePath = `/images/${imageFileName}`
+
+  // We kunnen niet direct controleren of het bestand bestaat in de browser
+  // Daarom retourneren we het pad en laten we de Image component de fallback afhandelen
+  return imagePath
 }
 
 // Helper function to check if a student is 'at risk' based on competency achievement
@@ -918,7 +944,7 @@ const generateActivities = (competencyId: string, subject: string, studentName =
   return activities
 }
 
-// Update the generateClassData function to ensure consistent activity counts
+// Wijzig de generateClassData functie om de profielafbeeldingen niet meer hardcoded toe te wijzen
 const generateClassData = (className: string): XAPIStatement[] => {
   const students = studentsByClass[className as keyof typeof studentsByClass].map((student) => {
     const { firstName, lastName } = student
@@ -935,17 +961,20 @@ const generateClassData = (className: string): XAPIStatement[] => {
       atRisk = Math.random() < 0.15
     }
 
+    // We laten de profielafbeelding bepalen door de getStudentProfileImage functie
+    // Deze functie wordt aangeroepen wanneer de afbeelding nodig is
+
     return {
       name,
       mbox: `mailto:${firstName.toLowerCase()}.${lastName.toLowerCase().replace(" ", "")}@school.be`,
       class: className,
-      profileImage: firstName === "Marc" && lastName === "Vertongen" ? "/marc.png" : "/profile_placeholder.png",
       atRisk,
     }
   })
 
   const statements: XAPIStatement[] = []
 
+  // Rest van de functie blijft hetzelfde...
   // Generate statements for each student, subject, and semester
   students.forEach((student) => {
     // Bijhouden of de student faalt voor hoofdvakken
@@ -1076,7 +1105,10 @@ const sport4Data = generateClassData("4Sport")
 const mechanica4Data = generateClassData("4Mechanica")
 const handel4Data = generateClassData("4Handel")
 const wewi5Data = generateClassData("5WeWi")
-const wewi6Data = generateClassData("6WeWi")
+
+// Generate data for the new 6WeWi A class
+const wewiA6Data = generateClassData("6WeWi A")
+const wewi6Data = generateClassData("6WeWi B")
 
 // Combine all data
 export const studentData: XAPIStatement[] = [
@@ -1089,6 +1121,7 @@ export const studentData: XAPIStatement[] = [
   ...mechanica4Data,
   ...handel4Data,
   ...wewi5Data,
+  ...wewiA6Data,
   ...wewi6Data,
 ]
 
