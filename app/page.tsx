@@ -95,7 +95,7 @@ function DashboardContent() {
   const [isAboveAverage, setIsAboveAverage] = useState(false)
 
   // Voeg deze state toe in de DashboardContent functie, bij de andere useState declaraties
-  const [sortOption, setSortOption] = useState<SortOption>({ field: "activities", direction: "desc" })
+  const [sortOption, setSortOption] = useState<SortOption>({ field: "hours", direction: "desc" })
 
   // Functie om het semesternummer te extraheren uit de activeSemester string
   const getSelectedSemesterNumber = (): 1 | 2 | 3 => {
@@ -791,7 +791,7 @@ function DashboardContent() {
         const classThresholds = JSON.parse(classThresholdsJSON)
 
         // Find the thresholds for the current class
-        const classThresholdObj = classThresholds.find((cls: any) => cls.className === selectedClass)
+        const classThresholdObj = classThresholds.find((cls) => cls.className === selectedClass)
 
         if (classThresholdObj) {
           // Use the class-specific attendance threshold
@@ -803,7 +803,7 @@ function DashboardContent() {
         }
 
         // Also load global thresholds for display purposes
-        const globalSettings = classThresholds.find((cls: any) => cls.className === "global")
+        const globalSettings = classThresholds.find((cls) => cls.className === "global")
         if (globalSettings) {
           setGlobalAttendanceThreshold(globalSettings.attendanceThreshold || 85)
           setGlobalIndividualGoal(globalSettings.individualGoal || 70)
@@ -813,8 +813,9 @@ function DashboardContent() {
       // Now check if the selected student has a custom threshold
       if (selectedStudent) {
         const studentProfilesJSON = localStorage.getItem("studentProfiles")
+        let studentProfiles = {}
         if (studentProfilesJSON) {
-          const studentProfiles = JSON.parse(studentProfilesJSON)
+          studentProfiles = JSON.parse(studentProfilesJSON)
 
           if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].attendanceThreshold) {
             // Use student-specific threshold if available
@@ -889,37 +890,34 @@ function DashboardContent() {
 
       // Load student-specific thresholds
       const studentProfilesJSON = localStorage.getItem("studentProfiles")
+      let studentProfiles = {}
       if (studentProfilesJSON) {
-        const studentProfiles = JSON.parse(studentProfilesJSON)
-
-        if (studentProfiles[selectedStudent]) {
-          // Load student-specific attendance threshold if available
-          if (studentProfiles[selectedStudent].attendanceThreshold) {
-            setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
-            console.log(
-              `Loaded student-specific attendance threshold for ${selectedStudent}:`,
-              studentProfiles[selectedStudent].attendanceThreshold,
-            )
-          } else {
-            // Otherwise load from class or global settings
-            loadThresholdsFromDB()
-          }
-
-          // Load student-specific individual goal if available
-          if (studentProfiles[selectedStudent].individualGoal) {
-            setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
-          } else {
-            setIndividualGoal(getStudentIndividualGoal(selectedStudent))
-          }
-        } else {
-          // If no profile exists for this student, load from class or global settings
-          loadThresholdsFromDB()
-        }
-      } else {
-        // If no profiles exist, load from class or global settings
-        loadThresholdsFromDB()
+        studentProfiles = JSON.parse(studentProfilesJSON)
       }
 
+      if (studentProfiles[selectedStudent]) {
+        // Load student-specific attendance threshold if available
+        if (studentProfiles[selectedStudent].attendanceThreshold) {
+          setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
+          console.log(
+            `Loaded student-specific attendance threshold for ${selectedStudent}:`,
+            studentProfiles[selectedStudent].attendanceThreshold,
+          )
+        } else {
+          // Otherwise load from class or global settings
+          loadThresholdsFromDB()
+        }
+
+        // Load student-specific individual goal if available
+        if (studentProfiles[selectedStudent].individualGoal) {
+          setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
+        } else {
+          setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+        }
+      } else {
+        // If no profile exists for this student, load from class or global settings
+        loadThresholdsFromDB()
+      }
       setIsLoadingThresholds(false)
     }
   }, [selectedStudent])
@@ -930,17 +928,15 @@ function DashboardContent() {
   }, [selectedClass, selectedStudent])
 
   // Now update the attendance threshold section to show the correct global value
-  // Find this code in the attendance threshold section:
   // Replace with:
 
-  // Find this code in the attendance threshold section:
+  // Now update the attendance threshold section to show the correct global value
   // Replace with:
 
   // Now update the individual goal section to show the correct global value
-  // Find this code in the individual goal section:
   // Replace with:
 
-  // Find this code in the individual goal section:
+  // Now update the individual goal section to show the correct global value
   // Replace with:
 
   // Function to check if attendance is below threshold - used by both profile and student filter
@@ -969,6 +965,46 @@ function DashboardContent() {
       window.dispatchEvent(event)
     }
   }, [selectedStudent, attendanceData, attendanceThreshold])
+
+  // Emit a custom event to update the student filter with performance data
+  useEffect(() => {
+    if (selectedStudent) {
+      // Create and dispatch a custom event with the performance data
+      const event = new CustomEvent("updateStudentStatus", {
+        detail: {
+          student: selectedStudent,
+          isAtRisk: percentage < individualGoal,
+          atRiskReason: percentage < individualGoal ? "Onder individuele doelstelling" : null,
+          performance: percentage, // Add the actual performance percentage
+          attendancePercentage: attendanceData?.present || 0,
+          isBelowAttendanceThreshold: attendanceData?.present < attendanceThreshold,
+        },
+      })
+      window.dispatchEvent(event)
+
+      // Also update the student profile with the current performance
+      try {
+        const studentProfilesJSON = localStorage.getItem("studentProfiles")
+        let studentProfiles = {}
+        if (studentProfilesJSON) {
+          studentProfiles = JSON.parse(studentProfilesJSON)
+        }
+
+        // Update or create this student's profile with performance data
+        studentProfiles[selectedStudent] = {
+          ...(studentProfiles[selectedStudent] || {}),
+          performance: percentage,
+        }
+
+        // Save back to localStorage
+        localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+
+        console.log(`Updated performance data (${percentage.toFixed(1)}%) for student: ${selectedStudent}`)
+      } catch (error) {
+        console.error("Error updating student performance in profile:", error)
+      }
+    }
+  }, [selectedStudent, percentage, individualGoal, attendanceData, attendanceThreshold])
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -1261,41 +1297,48 @@ function DashboardContent() {
                               />
                               <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
                             </div>
-                            <button
-                              className={`px-2 py-1 text-xs ${
-                                isSavingGoal ? "bg-gray-400" : "bg-amber-500 hover:bg-amber-600 text-white"
-                              } rounded-md flex items-center gap-1 shadow-sm transition-all duration-200`}
-                              disabled={isSavingGoal}
-                              onClick={handleSaveIndividualGoal}
-                            >
-                              {isSavingGoal ? (
-                                <>
-                                  <svg
-                                    className="animate-spin h-3 w-3 text-white"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <circle
-                                      className="opacity-25"
-                                      cx="12"
-                                      cy="12"
-                                      r="10"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                    ></circle>
-                                    <path
-                                      className="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
-                                  </svg>
-                                  {t.saving}
-                                </>
-                              ) : (
-                                t.save
-                              )}
-                            </button>
+                            <div className="relative group">
+                              <button
+                                className={`px-2 py-1 text-xs ${
+                                  isSavingGoal ? "bg-gray-400" : "bg-amber-500 hover:bg-amber-600 text-white"
+                                } rounded-md flex items-center gap-1 shadow-sm transition-all duration-200`}
+                                disabled={isSavingGoal}
+                                onClick={handleSaveIndividualGoal}
+                              >
+                                {isSavingGoal ? (
+                                  <>
+                                    <svg
+                                      className="animate-spin h-3 w-3 text-white"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                    {t.saving}
+                                  </>
+                                ) : (
+                                  t.save
+                                )}
+                              </button>
+                              <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50 pointer-events-none">
+                                {language === "en"
+                                  ? "This goal will only be saved for this student"
+                                  : "Dit doel wordt alleen opgeslagen voor deze leerling"}
+                              </div>
+                            </div>
                           </div>
                         </div>
 
@@ -1858,7 +1901,12 @@ function DashboardContent() {
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
                       <span>
-                        {t.sortBy}: {t[sortOption.field]}
+                        {t.sortBy}:{" "}
+                        {sortOption.field === "score"
+                          ? t.score
+                          : sortOption.field === "activities"
+                            ? t.activities
+                            : t.hoursPerWeek}
                       </span>
                       <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
                     </button>

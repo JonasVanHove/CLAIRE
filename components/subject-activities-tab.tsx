@@ -31,28 +31,28 @@ export function SubjectActivitiesTab({ subject, activities, isLoading, semester 
   const sortedActivities = useMemo(() => {
     const activitiesToSort = [...activities] // Create a copy to avoid modifying the original array
 
-    const filteredActivities = activitiesToSort.filter((activity) => {
-      const matchesSubject = activity.subjectId === subject
-      const matchesSemester = semester ? activity.semester === semester : true
+    // Filter activities to only include those linked to competencies
+    const competencyLinkedActivities = activitiesToSort.filter(
+      (activity) => activity.competencyId && activity.competencyId.trim() !== "",
+    )
 
-      // Filter out non-completed or non-evaluated activities when hideNonCompleted is true
-      const shouldShow = !hideNonCompleted || (activity.completed && activity.evaluated)
-
-      return matchesSubject && matchesSemester && shouldShow
-    })
+    // Remove duplicates by keeping only the first occurrence of each activity ID
+    const uniqueActivities = Array.from(
+      new Map(competencyLinkedActivities.map((activity) => [activity.id, activity])).values(),
+    )
 
     // Create a sorted array based on the current sort method
     let sorted: Activity[] = []
 
     switch (sortMethod.category) {
       case "date":
-        sorted = filteredActivities.sort((a, b) => {
+        sorted = uniqueActivities.sort((a, b) => {
           const comparison = new Date(b.date).getTime() - new Date(a.date).getTime()
           return sortMethod.direction === "desc" ? comparison : -comparison
         })
         break
       case "performance":
-        sorted = filteredActivities.sort((a, b) => {
+        sorted = uniqueActivities.sort((a, b) => {
           // Sort by score percentage
           const aPerformance = a.evaluated ? a.score / a.maxScore : -1
           const bPerformance = b.evaluated ? b.score / b.maxScore : -1
@@ -62,7 +62,7 @@ export function SubjectActivitiesTab({ subject, activities, isLoading, semester 
         break
       case "category":
         // Sort by type (examen, toets, taak)
-        sorted = filteredActivities.sort((a, b) => {
+        sorted = uniqueActivities.sort((a, b) => {
           const typeOrder = { examen: 1, toets: 2, taak: 3 }
           const comparison =
             (typeOrder[a.type as keyof typeof typeOrder] || 4) - (typeOrder[b.type as keyof typeof typeOrder] || 4)
@@ -71,13 +71,13 @@ export function SubjectActivitiesTab({ subject, activities, isLoading, semester 
         break
       case "title":
         // Sort alphabetically by title
-        sorted = filteredActivities.sort((a, b) => {
+        sorted = uniqueActivities.sort((a, b) => {
           const comparison = a.title.localeCompare(b.title)
           return sortMethod.direction === "asc" ? comparison : -comparison
         })
         break
       default:
-        sorted = filteredActivities
+        sorted = uniqueActivities
     }
 
     return sorted

@@ -229,7 +229,7 @@ export function SemesterScatterPlot({ title, data, className = "" }: ScatterPlot
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center">
-        <canvas ref={canvasRef} width={400} height={300} className="w-full h-full" />
+        <canvas ref={canvasRef} className="w-3/4 h-full mx-auto" />
       </div>
     </Card>
   )

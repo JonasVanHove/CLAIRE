@@ -141,11 +141,86 @@ export function ProgressHeader({ attendanceThreshold, individualGoal = 60 }: Pro
           attendancePercentage: attendanceData.present,
           attendanceThreshold: attendanceThreshold,
           isBelowAttendanceThreshold: attendanceData.present < attendanceThreshold,
+          performance: percentage, // Add the actual performance percentage
+          individualGoal: individualGoal, // Add the individual goal value
+          isAboveAverage: isAboveAverage, // Add whether student is above average
         },
       })
       window.dispatchEvent(statusEvent)
+
+      // Also update the student profile with the current performance and status
+      try {
+        const studentProfilesJSON = localStorage.getItem("studentProfiles")
+        const studentProfiles = studentProfilesJSON ? JSON.parse(studentProfilesJSON) : {}
+
+        // Update or create this student's profile with performance data
+        studentProfiles[selectedStudent] = {
+          ...(studentProfiles[selectedStudent] || {}),
+          performance: percentage,
+          individualGoal: individualGoal,
+          isAtRisk: isAtRisk,
+          attendancePercentage: attendanceData.present,
+          lastUpdated: new Date().toISOString(),
+        }
+
+        // Save back to localStorage
+        localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+      } catch (error) {
+        console.error("Error updating student profile:", error)
+      }
     }
-  }, [selectedStudent, isAtRisk, percentage, individualGoal, attendanceData.present, attendanceThreshold, language])
+  }, [
+    selectedStudent,
+    isAtRisk,
+    percentage,
+    individualGoal,
+    attendanceData.present,
+    attendanceThreshold,
+    language,
+    isAboveAverage,
+  ])
+
+  // Add this effect to refresh the status when the component mounts or when key values change
+  useEffect(() => {
+    // Listen for requests to refresh status
+    const handleRefreshRequest = (event: CustomEvent) => {
+      if (selectedStudent && event.detail?.requestedBy === "studentSelector") {
+        // Re-emit the status event to update the student selector
+        const statusEvent = new CustomEvent("updateStudentStatus", {
+          detail: {
+            student: selectedStudent,
+            isAtRisk: isAtRisk,
+            atRiskReason:
+              language === "en"
+                ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
+                : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`,
+            attendancePercentage: attendanceData.present,
+            attendanceThreshold: attendanceThreshold,
+            isBelowAttendanceThreshold: attendanceData.present < attendanceThreshold,
+            performance: percentage,
+            individualGoal: individualGoal,
+            isAboveAverage: isAboveAverage,
+          },
+        })
+        window.dispatchEvent(statusEvent)
+      }
+    }
+
+    window.addEventListener("requestStatusRefresh", handleRefreshRequest as EventListener)
+
+    return () => {
+      window.removeEventListener("requestStatusRefresh", handleRefreshRequest as EventListener)
+    }
+  }, [
+    selectedStudent,
+    isAtRisk,
+    percentage,
+    individualGoal,
+    attendanceData.present,
+    attendanceThreshold,
+    language,
+    isAboveAverage,
+  ])
 
   return (
     <div className="mb-6">

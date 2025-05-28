@@ -153,10 +153,12 @@ export interface CompetencyActivitiesResponse {
  *
  * @interface SubjectActivitiesResponse
  * @property {string} subject - Subject name
+ * @property {number} semester - Semester number (1, 2, or 3)
  * @property {Activity[]} activities - Array of activities for the subject
  */
 export interface SubjectActivitiesResponse {
   subject: string
+  semester: number
   activities: Activity[]
 }
 
@@ -660,24 +662,38 @@ class ApiService {
    *
    * @param {string} studentName - Student name
    * @param {string} subject - Subject name
+   * @param {number} [semester] - Optional semester number to filter activities
    * @returns {Promise<SubjectActivitiesResponse>} - Subject activities response
    */
-  async getSubjectActivities(studentName: string, subject: string): Promise<SubjectActivitiesResponse> {
+  async getSubjectActivities(
+    studentName: string,
+    subject: string,
+    semester?: number,
+  ): Promise<SubjectActivitiesResponse> {
     // In a real implementation, this would be a fetch call to your API
     // const response = await fetch(`${this.baseUrl}/students/${encodeURIComponent(studentName)}/subjects/${encodeURIComponent(subject)}/activities`, {
-    //   method: 'GET',
+    //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ semester }),
     // });
     // return await response.json();
 
     // Simulate API delay
     await this.delay()
 
+    console.log(`Fetching activities for student: ${studentName}, subject: ${subject}, semester: ${semester}`)
+
     // Mock implementation using the existing data functions
-    const activities = getStudentActivitiesForSubject(studentName, subject)
+    let activities = getStudentActivitiesForSubject(studentName, subject)
+
+    // Filter activities by semester if provided
+    if (semester !== undefined) {
+      activities = activities.filter((activity) => activity.semester === semester)
+    }
 
     return {
       subject,
+      semester: semester || 0, // Default to 0 if semester is not provided
       activities,
     }
   }

@@ -175,32 +175,67 @@ export function SubjectCard({
           </div>
 
           <div className="relative">
-            {/* Kleurlijnen voor score categorieën */}
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 flex">
-              <div className="bg-red-500 h-full flex-[10]"></div>
-              <div className="bg-amber-500 h-full flex-[4]"></div>
-              <div className="bg-green-500 h-full flex-[6]"></div>
-            </div>
-
             {/* Staafdiagram - volledige klasweergave */}
-            <div className="h-12 px-2 flex items-end gap-0.5">
+            <div className="h-12 px-2 flex items-end gap-0.5 relative">
+              {/* Colored status bar - now positioned behind the distribution bars with higher z-index */}
+              <div className="absolute bottom-0 left-2 right-2 h-0.5 flex z-10">
+                <div className="bg-red-500 h-full flex-[10]"></div>
+                <div className="bg-amber-500 h-full flex-[4]"></div>
+                <div className="bg-green-500 h-full flex-[6]"></div>
+              </div>
+
+              {/* Class distribution - consistent for all students */}
               {distribution.map((value, index) => {
                 // Calculate the maximum value in the distribution for proper scaling
                 const maxValue = Math.max(...distribution)
                 // Scale the height based on the maximum value to ensure full representation
                 const heightPercentage = maxValue > 0 ? (value / maxValue) * 100 : 0
 
+                // Determine if this is the student's bucket and apply appropriate color
+                const isStudentBucket = index === studentBucket
+                let barColor = "bg-gray-300 dark:bg-gray-600"
+
+                if (isStudentBucket) {
+                  switch (displayStatus) {
+                    case "danger":
+                      barColor = "bg-red-300 dark:bg-red-700"
+                      break
+                    case "warning":
+                      barColor = "bg-amber-300 dark:bg-amber-700"
+                      break
+                    default:
+                      barColor = "bg-green-300 dark:bg-green-700"
+                      break
+                  }
+                }
+
                 return (
                   <div
                     key={index}
-                    className={`flex-1 ${index === studentBucket ? getStatusColor() : "bg-gray-300 dark:bg-gray-600"} rounded-sm`}
+                    className={`flex-1 ${barColor} rounded-sm relative`}
                     style={{ height: `${heightPercentage}%` }}
                     title={`${index * 5}-${(index + 1) * 5}%: ${value} ${
                       language === "en" ? "students" : "leerlingen"
                     }`}
-                  />
+                  >
+                    {/* Add a highlight indicator for the student's bucket */}
+                    {isStudentBucket && (
+                      <div className={`absolute bottom-0 h-1 w-full ${getStatusColor()} rounded-sm z-20`} />
+                    )}
+                  </div>
                 )
               })}
+
+              {/* Student position indicator - overlaid on top of the distribution with highest z-index */}
+              {studentBucket !== undefined && (
+                <div
+                  className={`absolute bottom-0 h-1 w-2 ${getStatusColor()} rounded-sm z-30`}
+                  style={{
+                    left: `calc(${(studentBucket / distribution.length) * 100}% + ${2 + studentBucket * 0.5}px)`,
+                    width: `calc(${100 / distribution.length}% - 1px)`,
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>

@@ -1,0 +1,34 @@
+/* CSS module for POC dashboard styles. Use Tailwind for most styling, but add custom styles here if needed. */
+.dashboard {
+  background: var(--color-background, #f1f4f6);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 1.5rem;
+}
+
+.progress-header {
+  margin-bottom: 2rem;
+}
+
+.dot-plot {
+  width: 100%;
+  height: 200px;
+}
+
+.subject-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .subject-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .subject-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

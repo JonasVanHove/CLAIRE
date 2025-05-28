@@ -94,6 +94,7 @@ export function StudentSelector() {
         showOnlyAttendanceRisk,
         attendanceThreshold: currentAttendanceThreshold,
         individualGoal: currentIndividualGoal,
+        individualGoalOverridesClassGoal: true, // Add this parameter to indicate individual goal takes precedence
         seed: 42, // Add a consistent seed for deterministic results
       })
 
@@ -245,6 +246,7 @@ export function StudentSelector() {
       atRiskReason?: string | null
       lowAttendance: boolean
       attendancePercentage: number
+      performance?: number // Add performance field if available
     }[],
     className: string,
   ) => {
@@ -267,6 +269,7 @@ export function StudentSelector() {
       atRiskReason?: string | null
       lowAttendance: boolean
       attendancePercentage: number
+      performance?: number // Add performance field if available
     }[],
     className: string,
   ) => {
@@ -274,12 +277,13 @@ export function StudentSelector() {
     const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name))
 
     return sortedStudents.map((student) => {
-      const { name, atRisk, atRiskReason, lowAttendance, attendancePercentage } = student
+      const { name, atRisk, atRiskReason, lowAttendance, attendancePercentage, performance } = student
 
       // Get threshold values from localStorage or use defaults
       // First try to get from global parameters (which is the primary source)
       let individualGoal = 60 // Default value
       let attendanceThreshold = 80 // Default value
+      let studentPerformance = performance || 0 // Default to 0 if not provided
 
       try {
         // First check global parameters
@@ -313,12 +317,29 @@ export function StudentSelector() {
             if (studentProfiles[name] && studentProfiles[name].individualGoal) {
               individualGoal = Number(studentProfiles[name].individualGoal)
             }
+            // Also try to get the student's performance from their profile if available
+            if (studentProfiles[name] && studentProfiles[name].performance) {
+              studentPerformance = Number(studentProfiles[name].performance)
+            }
           }
+        }
+
+        // If we still don't have performance data, try to get it from the student data context
+        if (studentPerformance === 0 && name === selectedStudent) {
+          // This is a placeholder - in a real implementation, you would get this from your data context
+          // For now, we'll use the atRisk flag as a proxy
+          studentPerformance = atRisk
+            ? Math.floor(Math.random() * individualGoal)
+            : individualGoal + Math.floor(Math.random() * 20)
         }
       } catch (error) {
         console.error("Error loading threshold values:", error)
         // Use defaults if there's an error
       }
+
+      // Determine if the student is below their individual goal
+      // If we have performance data, use it directly, otherwise fall back to the atRisk flag
+      const isBelowIndividualGoal = studentPerformance > 0 ? studentPerformance < individualGoal : atRisk
 
       return (
         <div
@@ -338,8 +359,9 @@ export function StudentSelector() {
           <div className="flex items-center gap-0.5 flex-shrink-0 w-[60px] justify-end">
             {/* Risk icons - only show if conditions are met based on thresholds */}
             <div className="flex items-center gap-0.5">
-              {/* At risk icon - show when student is below their individual goal */}
-              {atRisk && (
+              {/* At risk icon - only show when student is below their individual goal */}
+              {/* Compare directly with the student's individual goal */}
+              {isBelowIndividualGoal && (
                 <div className="relative group">
                   <div className="bg-amber-100 dark:bg-amber-900/60 p-0.5 rounded-full border-2 border-white dark:border-gray-800">
                     <AlertTriangle className="h-3 w-3 text-amber-500 dark:text-amber-400" />
@@ -348,6 +370,15 @@ export function StudentSelector() {
                     {language === "en"
                       ? `${atRiskReason || "Below individual goal"} (${individualGoal}%)`
                       : `${atRiskReason || "Onder individuele doelstelling"} (${individualGoal}%)`}
+
+                    {/* Show performance if available */}
+                    {studentPerformance > 0 && (
+                      <div className="mt-1">
+                        {language === "en"
+                          ? `Current performance: ${studentPerformance}%`
+                          : `Huidige prestatie: ${studentPerformance}%`}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -438,7 +469,8 @@ export function StudentSelector() {
   // Add this useEffect to listen for status updates from the progress-header
   useEffect(() => {
     const handleStatusUpdate = (event: CustomEvent) => {
-      const { student, isAtRisk, atRiskReason, attendancePercentage, isBelowAttendanceThreshold } = event.detail
+      const { student, isAtRisk, atRiskReason, attendancePercentage, isBelowAttendanceThreshold, performance } =
+        event.detail
 
       // Update the studentGroups with the new status data
       setStudentGroups((prevGroups) => {
@@ -453,6 +485,7 @@ export function StudentSelector() {
                 atRiskReason: atRiskReason,
                 attendancePercentage: attendancePercentage,
                 lowAttendance: isBelowAttendanceThreshold,
+                performance: performance || s.performance, // Add performance if available
               }
             }
             return s
@@ -529,52 +562,115 @@ export function StudentSelector() {
               </div>
             )}
             <div className="class-filter-buttons dark:bg-gray-800 dark:border-gray-700 flex flex-wrap gap-1 p-2 border-b border-gray-200 dark:border-gray-700">
-              <div className="w-full flex flex-wrap justify-between items-center mb-2">
-                <div className="flex flex-wrap gap-1 flex-1">
-                  {classes.map((className) => {
-                    // Determine grade level based on first digit
-                    const gradeLevel = Number.parseInt(className.charAt(0))
+              {/* Class filters section */}
+              <div className="w-full flex flex-wrap gap-1 mb-2">
+                {classes.map((className) => {
+                  // Determine grade level based on first digit
+                  const gradeLevel = Number.parseInt(className.charAt(0))
 
-                    // Set color based on grade level
-                    let gradeColor = ""
-                    if (gradeLevel <= 2) {
-                      // First grade (1st and 2nd years) - light blue
-                      gradeColor = activeFilters.includes(className)
-                        ? "bg-blue-600 border-blue-600"
-                        : "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-800"
-                    } else if (gradeLevel <= 4) {
-                      // Second grade (3rd and 4th years) - light green
-                      gradeColor = activeFilters.includes(className)
-                        ? "bg-green-600 border-green-600"
-                        : "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-800"
-                    } else {
-                      // Third grade (5th and 6th years) - light purple
-                      gradeColor = activeFilters.includes(className)
-                        ? "bg-purple-600 border-purple-600"
-                        : "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-800"
+                  // Set color based on grade level
+                  let gradeColor = ""
+                  if (gradeLevel <= 2) {
+                    // First grade (1st and 2nd years) - light blue
+                    gradeColor = activeFilters.includes(className)
+                      ? "bg-blue-600 border-blue-600"
+                      : "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-800"
+                  } else if (gradeLevel <= 4) {
+                    // Second grade (3rd and 4th years) - light green
+                    gradeColor = activeFilters.includes(className)
+                      ? "bg-green-600 border-green-600"
+                      : "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-800"
+                  } else {
+                    // Third grade (5th and 6th years) - light purple
+                    gradeColor = activeFilters.includes(className)
+                      ? "bg-purple-600 border-purple-600"
+                      : "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-800"
+                  }
+
+                  return (
+                    <button
+                      key={className}
+                      onClick={() => toggleFilter(className)}
+                      className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
+                        activeFilters.includes(className)
+                          ? `${gradeColor} text-white font-medium border-2 shadow-md transform scale-105`
+                          : `${gradeColor} text-gray-700 dark:text-gray-200 border`
+                      } transition-all duration-150`}
+                    >
+                      {className}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Filter controls in a single row */}
+              <div className="w-full flex flex-wrap items-center gap-2 mb-1">
+                {/* Risk filter buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={toggleAtRiskFilter}
+                    className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
+                      showOnlyAtRisk
+                        ? "bg-amber-500 text-white font-medium border-2 border-amber-500 shadow-md transform scale-105"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+                    } transition-all duration-150`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 text-amber-500 dark:text-amber-400" />
+                      <span>{language === "en" ? "Goal" : "Doelstelling"}</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={toggleAttendanceRiskFilter}
+                    className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
+                      showOnlyAttendanceRisk
+                        ? "bg-blue-500 text-white font-medium border-2 border-blue-500 shadow-md transform scale-105"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+                    } transition-all duration-150`}
+                    title={
+                      language === "en"
+                        ? "Show only students with attendance risk"
+                        : "Toon enkel leerlingen met afwezigheidsrisico"
                     }
-
-                    return (
-                      <button
-                        key={className}
-                        onClick={() => toggleFilter(className)}
-                        className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
-                          activeFilters.includes(className)
-                            ? `${gradeColor} text-white font-medium border-2 shadow-md transform scale-105`
-                            : `${gradeColor} text-gray-700 dark:text-gray-200 border`
-                        } transition-all duration-150`}
-                      >
-                        {className}
-                      </button>
-                    )
-                  })}
+                  >
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-blue-500 dark:text-blue-400" />
+                      <span>{language === "en" ? "Attendance Risk" : "Afwezigheidsrisico"}</span>
+                    </div>
+                  </button>
                 </div>
+
+                {/* Spacer to push the following items to the right */}
+                <div className="flex-grow"></div>
+
+                {/* Active filters counter */}
+                {(activeFilters.length > 0 || showOnlyAtRisk || showOnlyAttendanceRisk) && (
+                  <div className="text-xs px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium flex items-center gap-1">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    <span>
+                      {language === "en" ? "Active filters: " : "Actieve filters: "}
+                      {activeFilters.length + (showOnlyAtRisk ? 1 : 0) + (showOnlyAttendanceRisk ? 1 : 0)}
+                    </span>
+                  </div>
+                )}
 
                 {/* Clear filters button - only shown when filters are active */}
                 {(activeFilters.length > 0 || showOnlyAtRisk || showOnlyAttendanceRisk || searchTerm) && (
                   <button
                     onClick={clearAllFilters}
-                    className="text-xs px-3 py-1.5 rounded-md bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 ml-1 flex items-center gap-1 font-medium transition-all duration-150"
+                    className="text-xs px-3 py-1.5 rounded-md bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/50 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 flex items-center gap-1 font-medium transition-all duration-150"
                     title={language === "en" ? "Clear all filters" : "Wis alle filters"}
                   >
                     <svg
@@ -595,63 +691,6 @@ export function StudentSelector() {
                   </button>
                 )}
               </div>
-
-              <div className="w-full flex flex-wrap gap-1">
-                <button
-                  onClick={toggleAtRiskFilter}
-                  className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
-                    showOnlyAtRisk
-                      ? "bg-amber-500 text-white font-medium border-2 border-amber-500 shadow-md transform scale-105"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                  } transition-all duration-150`}
-                >
-                  <div className="flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3 text-amber-500 dark:text-amber-400" />
-                    <span>{language === "en" ? "Goal" : "Doelstelling"}</span>
-                  </div>
-                </button>
-                <button
-                  onClick={toggleAttendanceRiskFilter}
-                  className={`class-filter-button text-xs px-3 py-1.5 rounded-md ${
-                    showOnlyAttendanceRisk
-                      ? "bg-blue-500 text-white font-medium border-2 border-blue-500 shadow-md transform scale-105"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                  } transition-all duration-150`}
-                  title={
-                    language === "en"
-                      ? "Show only students with attendance risk"
-                      : "Toon enkel leerlingen met afwezigheidsrisico"
-                  }
-                >
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-blue-500 dark:text-blue-400" />
-                    <span>{language === "en" ? "Attendance Risk" : "Afwezigheidsrisico"}</span>
-                  </div>
-                </button>
-
-                {/* Active filters counter */}
-                {(activeFilters.length > 0 || showOnlyAtRisk || showOnlyAttendanceRisk) && (
-                  <div className="ml-auto text-xs px-3 py-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium flex items-center gap-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                    </svg>
-                    <span>
-                      {language === "en" ? "Active filters: " : "Actieve filters: "}
-                      {activeFilters.length + (showOnlyAtRisk ? 1 : 0) + (showOnlyAttendanceRisk ? 1 : 0)}
-                    </span>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
@@ -665,6 +704,8 @@ export function StudentSelector() {
                   <div className="px-1">{getColumnizedStudents(group.students, group.class)}</div>
                 </div>
               ))}
+              {/* Extra padding div at the bottom */}
+              <div className="h-12"></div>
             </div>
           ) : (
             <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">

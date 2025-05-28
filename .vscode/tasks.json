@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Verwijder legacy-bestanden",
+			"command": "Remove-Item -Path .\\index.html, .\\script.js, .\\styles.css -Force",
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}
