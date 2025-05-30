@@ -1,8 +1,8 @@
 # CLAIRE
 
 <div align="center">
-  <img src="public/CLAIRE-Logo.png" alt="CLAIRE Logo" width="200" height="200" />
-  <p><strong>Competency Learning Analytics for Insights and Reflection in Education</strong></p>
+   <img src="public/CLAIRE-Logo.png" alt="CLAIRE Logo" width="200" height="200" />
+   <p><strong>Competency Learning Analytics for Insights and Reflection in Education</strong></p>
 </div>
 
 ## Overview
@@ -18,7 +18,7 @@ Developed with care, in the hope that CLAIRE will serve as a useful foundation f
 
 This prototype demonstrates a Learning Analytics Dashboard designed to support secondary school teachers in interpreting student progress.
 
-### Key Features:
+### Key Features
 - **Student Selection & Notes** – Easily filter and select students, view profiles, and check teacher notes.
 - **Competency Overview** – Track overall progress, achievements, and status across three semesters.
 - **Subject Breakdown** – Visualize class distribution, achieved competencies, and evaluation activities.
@@ -36,39 +36,36 @@ The dashboard aims to transform raw learning data into clear, actionable insight
 
 ### Installation
 
-1. Clone the repository
-
-2. Install dependencies
-   \`\`\`bash
-   npm install
-   # or
-   yarn install
-   \`\`\`
-
-3. Start the development server
-   \`\`\`bash
-   npm run dev
-   # or
-   yarn dev
-   \`\`\`
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+1. **Clone the repository**
+2. **Install dependencies**
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
+3. **Start the development server**
+    ```bash
+    npm run dev
+    # or
+    yarn dev
+    ```
+4. **Open** [http://localhost:3000](http://localhost:3000) **in your browser**
 
 ## Documentation
 
 The project is documented using TypeDoc. To generate the documentation, run:
 
-\`\`\`bash
+```bash
 npm run docs
 # or
 yarn docs
-\`\`\`
+```
 
 This will create a `docs` folder with the generated documentation. Open `docs/index.html` in your browser to view it.
 
 ## Project Structure
 
-\`\`\`
+```text
 claire-student-dashboard/
 ├── app/                  # Next.js app directory
 │   ├── layout.tsx        # Root layout component
@@ -91,4 +88,4 @@ claire-student-dashboard/
 ├── types/                # TypeScript types
 ├── docs/                 # Generated documentation
 └── ...                   # Configuration files
-\`\`\`
+```
