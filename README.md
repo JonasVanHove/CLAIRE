@@ -6,17 +6,17 @@
 </div>
 
 ## Overview
-CLAIRE is a dashboard designed to make learning data more accessible and insightful. Developed as a proof of concept (PoC) in collaboration with **KU Leuven**, **GITO Overijse**, and **Eummena**, it aims to support secondary school teachers in monitoring and interpreting student progress.
+CLAIRE is a dashboard designed to support the interpretation of learning data. It was developed as a proof of concept (PoC) by a master's student in Applied Computer Science at KU Leuven.
 
-This project was initiated by Jonas Van Hove as part of his master’s thesis, _"Turning Learning Data into Meaningful Learning Analytics Dashboards"_ (2025). The dashboard was further developed in cooperation with Eummena to enhance its functionality and impact.
+This dashboard was created by Jonas Van Hove as part of his master's thesis titled "Turning Learning Data into Meaningful Learning Analytics Dashboards" (2025).
 
-With great care, the CLAIRE dashboard has been crafted to serve as a valuable tool for future learning analytics dashboards, both within GITO and beyond.
+Developed with care, in the hope that CLAIRE will serve as a useful foundation for future data-driven tools in education.
 
 ---
 
 ## Project Overview
 
-This prototype demonstrates a Learning Analytics Dashboard designed to support secondary school teachers in interpreting student progress during class councils.
+This prototype demonstrates a Learning Analytics Dashboard designed to support secondary school teachers in interpreting student progress.
 
 ### Key Features:
 - **Student Selection & Notes** – Easily filter and select students, view profiles, and check teacher notes.
@@ -25,9 +25,7 @@ This prototype demonstrates a Learning Analytics Dashboard designed to support s
 - **Competency Details** – Identify competencies that need extra attention and see related evaluations.
 - **Activity Insights** – Analyze test scores, assignments, and how students perform compared to their peers.
 
-The dashboard aims to transform raw learning data into clear, actionable insights that enable teachers to make informed decisions during class councils.
-
-💬 Your feedback is invaluable! Let us know your thoughts in the comments—every suggestion helps refine the tool.
+The dashboard aims to transform raw learning data into clear, actionable insights that enable teachers to make informed decisions.
 
 ## Getting Started
 
@@ -94,21 +92,3 @@ claire-student-dashboard/
 ├── docs/                 # Generated documentation
 └── ...                   # Configuration files
 \`\`\`
-
-## API Documentation
-
-The API service is documented using JSDoc comments. The documentation is generated using TypeDoc and can be found in the `docs` folder.
-
-### Key API Endpoints
-
-- `getStudentList`: Get a list of students with filtering options
-- `getStudentDetails`: Get detailed information for a specific student
-- `getSemesterScores`: Get semester scores for class comparison
-- `getSubjectCompetencies`: Get competencies for a specific subject
-- `getCompetencyActivities`: Get activities for a specific competency
-- `getSubjectActivities`: Get activities for a specific subject
-- `getClassDistribution`: Get class distribution for a specific subject
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
