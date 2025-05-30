@@ -223,7 +223,7 @@ export function SettingsMenu() {
 
             <div className="space-y-4">
               {/* Global Parameters Option */}
-              <div
+              {/* <div
                 className="flex items-center justify-between relative cursor-pointer"
                 onClick={() => {
                   setShowGlobalParams(true)
@@ -248,10 +248,10 @@ export function SettingsMenu() {
                 >
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
-              </div>
+              </div> */}
 
               {/* Hide Non-Completed Toggle - with consistent label and tooltip */}
-              <div className="flex items-center justify-between relative">
+              {/* <div className="flex items-center justify-between relative">
                 <div className="flex items-center gap-2">
                   {hideNonCompleted ? (
                     <EyeOff className="h-4 w-4 text-[#49454F]" />
@@ -279,7 +279,7 @@ export function SettingsMenu() {
                     }`}
                   />
                 </button>
-              </div>
+              </div> */}
 
               {/* Compact View Toggle - with consistent label */}
               <div className="flex items-center justify-between">
