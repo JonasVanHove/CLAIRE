@@ -3,10 +3,10 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"label": "Verwijder legacy-bestanden",
-			"command": "Remove-Item -Path .\\index.html, .\\script.js, .\\styles.css -Force",
+			"label": "Run CLAIRE project",
+			"command": "pnpm run dev",
 			"group": "build",
-			"isBackground": false
+			"isBackground": true
 		}
 	]
 }

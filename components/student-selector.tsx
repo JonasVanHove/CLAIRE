@@ -606,6 +606,7 @@ export function StudentSelector() {
               {/* Filter controls in a single row */}
               <div className="w-full flex flex-wrap items-center gap-2 mb-1">
                 {/* Risk filter buttons */}
+                {/*
                 <div className="flex items-center gap-1">
                   <button
                     onClick={toggleAtRiskFilter}
@@ -638,7 +639,7 @@ export function StudentSelector() {
                       <span>{language === "en" ? "Attendance Risk" : "Afwezigheidsrisico"}</span>
                     </div>
                   </button>
-                </div>
+                </div>*/}
 
                 {/* Spacer to push the following items to the right */}
                 <div className="flex-grow"></div>
