@@ -358,9 +358,11 @@ export function StudentSelector() {
           {/* Fixed-width container for icons to ensure consistent alignment */}
           <div className="flex items-center gap-0.5 flex-shrink-0 w-[60px] justify-end">
             {/* Risk icons - only show if conditions are met based on thresholds */}
-            <div className="flex items-center gap-0.5">
               {/* At risk icon - only show when student is below their individual goal */}
               {/* Compare directly with the student's individual goal */}
+              {/* Show performance if available */}
+              {/* Attendance risk icon - show ONLY when attendance is strictly below threshold */}
+            {/* <div className="flex items-center gap-0.5">
               {isBelowIndividualGoal && (
                 <div className="relative group">
                   <div className="bg-amber-100 dark:bg-amber-900/60 p-0.5 rounded-full border-2 border-white dark:border-gray-800">
@@ -371,7 +373,6 @@ export function StudentSelector() {
                       ? `${atRiskReason || "Below individual goal"} (${individualGoal}%)`
                       : `${atRiskReason || "Onder individuele doelstelling"} (${individualGoal}%)`}
 
-                    {/* Show performance if available */}
                     {studentPerformance > 0 && (
                       <div className="mt-1">
                         {language === "en"
@@ -383,7 +384,6 @@ export function StudentSelector() {
                 </div>
               )}
 
-              {/* Attendance risk icon - show ONLY when attendance is strictly below threshold */}
               {attendancePercentage < attendanceThreshold && (
                 <div className="relative group attendance-risk-indicator">
                   <div className="bg-blue-100 dark:bg-blue-900/60 p-0.5 rounded-full border-2 border-white dark:border-gray-800">
@@ -397,7 +397,7 @@ export function StudentSelector() {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Checkmark for selected student */}
             {selectedStudent === name && (
