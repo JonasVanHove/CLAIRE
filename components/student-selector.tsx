@@ -545,7 +545,7 @@ export function StudentSelector() {
 
       {isOpen && (
         <div
-          className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
+          className="absolute z-[9999] mt-1 w-full bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
           style={{ maxHeight: "calc(70vh)" }}
         >
           <div className="relative">
