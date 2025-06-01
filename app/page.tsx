@@ -315,9 +315,9 @@ function DashboardContent() {
   }, [selectedStudent])
 
   // Replace the semesterScores useMemo with API calls
-  const [semester1Data, setSemester1Data] = useState([])
-  const [semester2Data, setSemester2Data] = useState([])
-  const [semester3Data, setSemester3Data] = useState([])
+  const [semester1Data, setSemester1Data] = useState<{ name: string; score: number; isCurrentStudent: boolean; }[]>([])
+  const [semester2Data, setSemester2Data] = useState<{ name: string; score: number; isCurrentStudent: boolean; }[]>([])
+  const [semester3Data, setSemester3Data] = useState<{ name: string; score: number; isCurrentStudent: boolean; }[]>([])
 
   useEffect(() => {
     if (selectedStudent && selectedClass) {
@@ -352,8 +352,25 @@ function DashboardContent() {
   }, [selectedStudent])
 
   // Get consistent attendance data
-  const attendanceData = useMemo(() => {
-    return getStudentAttendance(selectedStudent)
+  // Define a type for attendance data to include all expected fields
+  type AttendanceData = {
+    present: number
+    late: number
+    unauthorized: number
+    authorized: number
+    [key: string]: number
+  }
+
+  const attendanceData = useMemo<AttendanceData>(() => {
+    // Ensure attendanceData always has present, late, unauthorized, and authorized fields
+    const data = getStudentAttendance(selectedStudent) as Partial<AttendanceData> | undefined
+    return {
+      present: data?.present ?? 0,
+      late: data?.late ?? 0,
+      unauthorized: data?.unauthorized ?? 0,
+      authorized: data?.authorized ?? 0,
+      // Add any other fields you expect to use
+    }
   }, [selectedStudent])
 
   // Voeg deze functie toe in de DashboardContent functie, voor de renderSemester functie
@@ -529,7 +546,7 @@ function DashboardContent() {
   const renderSemester = (semesterNum: number, isActive: boolean) => {
     // Each subject shown here belongs to this specific semester
     // This relationship is defined in the database and cannot be changed
-    const subjects = semesterSubjects[semesterNum]
+    const subjects = semesterSubjects[semesterNum as 1 | 2 | 3]
 
     // Sorteer de vakken op basis van de huidige sorteeroptie
     const sortedSubjects = [...subjects].sort((a, b) => {
@@ -589,7 +606,7 @@ function DashboardContent() {
               activities={subject.activities}
               distribution={subject.distribution}
               studentBucket={subject.studentBucket}
-              status={subject.status}
+              status={subject.status as "danger" | "warning" | "success" | undefined}
               isActive={isActive}
               compact={false}
               className="h-48" // Make cards taller
@@ -730,8 +747,11 @@ function DashboardContent() {
 
   useEffect(() => {
     // Function to handle the refresh event
-    const handleRefreshStudentData = async (event: CustomEvent) => {
+    const handleRefreshStudentData = async (event: Event) => {
       if (!selectedStudent) return
+
+      // Cast to CustomEvent to access .detail
+      const customEvent = event as CustomEvent
 
       // Show loading state
       setIsLoadingStudentData(true)
@@ -741,15 +761,18 @@ function DashboardContent() {
         const studentData = await api.getStudentDetails(selectedStudent, selectedClass)
 
         // Update the student context with the fetched data
-        setStudentData(studentData)
+        setStudentData({
+          ...studentData,
+          atRiskReason: studentData.atRiskReason ?? "",
+        })
 
         // Update local threshold values if they were changed
-        if (event.detail?.thresholdsUpdated) {
-          if (event.detail.attendanceThreshold) {
-            setAttendanceThreshold(event.detail.attendanceThreshold)
+        if (customEvent.detail?.thresholdsUpdated) {
+          if (customEvent.detail.attendanceThreshold) {
+            setAttendanceThreshold(customEvent.detail.attendanceThreshold)
           }
-          if (event.detail.individualGoal) {
-            setIndividualGoal(event.detail.individualGoal)
+          if (customEvent.detail.individualGoal) {
+            setIndividualGoal(customEvent.detail.individualGoal)
           }
         }
 
@@ -763,11 +786,11 @@ function DashboardContent() {
     }
 
     // Add event listener for the custom event
-    window.addEventListener("refreshStudentData", handleRefreshStudentData as EventListener)
+    window.addEventListener("refreshStudentData", handleRefreshStudentData)
 
     // Clean up the event listener when component unmounts
     return () => {
-      window.removeEventListener("refreshStudentData", handleRefreshStudentData as EventListener)
+      window.removeEventListener("refreshStudentData", handleRefreshStudentData)
     }
   }, [selectedStudent, selectedClass, setStudentData])
 
@@ -791,7 +814,7 @@ function DashboardContent() {
         const classThresholds = JSON.parse(classThresholdsJSON)
 
         // Find the thresholds for the current class
-        const classThresholdObj = classThresholds.find((cls) => cls.className === selectedClass)
+        const classThresholdObj = classThresholds.find((cls: any) => cls.className === selectedClass)
 
         if (classThresholdObj) {
           // Use the class-specific attendance threshold
@@ -803,7 +826,7 @@ function DashboardContent() {
         }
 
         // Also load global thresholds for display purposes
-        const globalSettings = classThresholds.find((cls) => cls.className === "global")
+        const globalSettings = classThresholds.find((cls: any) => cls.className === "global")
         if (globalSettings) {
           setGlobalAttendanceThreshold(globalSettings.attendanceThreshold || 85)
           setGlobalIndividualGoal(globalSettings.individualGoal || 70)
@@ -813,10 +836,18 @@ function DashboardContent() {
       // Now check if the selected student has a custom threshold
       if (selectedStudent) {
         const studentProfilesJSON = localStorage.getItem("studentProfiles")
-        let studentProfiles = {}
+        type StudentProfile = {
+          attendanceThreshold?: number
+          individualGoal?: number
+          [key: string]: any
+        }
+        type StudentProfiles = {
+          [studentName: string]: StudentProfile
+        }
+        let studentProfiles: StudentProfiles = {}
         if (studentProfilesJSON) {
           studentProfiles = JSON.parse(studentProfilesJSON)
-
+  
           if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].attendanceThreshold) {
             // Use student-specific threshold if available
             setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
@@ -831,7 +862,7 @@ function DashboardContent() {
               `No student-specific threshold found for ${selectedStudent}, using class threshold: ${classThreshold}`,
             )
           }
-
+  
           // Load individual goal from student profile if available
           if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].individualGoal) {
             setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
@@ -890,7 +921,7 @@ function DashboardContent() {
 
       // Load student-specific thresholds
       const studentProfilesJSON = localStorage.getItem("studentProfiles")
-      let studentProfiles = {}
+      let studentProfiles: { [key: string]: any } = {}
       if (studentProfilesJSON) {
         studentProfiles = JSON.parse(studentProfilesJSON)
       }
@@ -985,7 +1016,7 @@ function DashboardContent() {
       // Also update the student profile with the current performance
       try {
         const studentProfilesJSON = localStorage.getItem("studentProfiles")
-        let studentProfiles = {}
+        let studentProfiles: { [key: string]: any } = {}
         if (studentProfilesJSON) {
           studentProfiles = JSON.parse(studentProfilesJSON)
         }
@@ -1047,19 +1078,27 @@ function DashboardContent() {
                       <div className="flex items-start">
                         {/* Profile image with status indicator */}
                         <div className="relative mr-4">
-                          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700 shadow-sm">
-                            <Image
-                              src={profileImage || "/placeholder.svg"}
+                            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700 shadow-sm">
+                              <Image
+                              src={profileImage || "/images/default.png"}
                               alt={selectedStudent}
                               width={80}
                               height={80}
                               className="object-cover"
                               onError={(e) => {
-                                // Als de afbeelding niet kan worden geladen, gebruik dan de standaard afbeelding
-                                ;(e.target as HTMLImageElement).src = "/images/profiles/default.png"
+                                const img = e.target as HTMLImageElement
+                                // @ts-ignore
+                                img._errorCount = (img._errorCount || 0) + 1
+                                // @ts-ignore
+                                if (
+                                img._errorCount <= 3 &&
+                                img.src !== window.location.origin + "/images/default.png"
+                                ) {
+                                img.src = "/images/default.png"
+                                }
                               }}
-                            />
-                          </div>
+                              />
+                            </div>
                           <div className="absolute -bottom-1 -right-1 flex space-x-1">
                             {percentage < individualGoal && (
                               <div className="bg-amber-100 dark:bg-amber-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
@@ -1226,14 +1265,16 @@ function DashboardContent() {
                               {language === "en" ? "Individual:" : "Individueel:"}
                             </span>
                             <User className="h-3 w-3 text-blue-500 dark:text-blue-400 mr-0.5" />
-                            <span className="font-medium text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span>
+                            {/* <span className="font-medium text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span> */}
+                            <span className="font-medium text-blue-500 dark:text-blue-400">{globalAttendanceThreshold}%</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 dark:text-gray-400">
                               {language === "en" ? "Class goal:" : "Klasdoel:"}
                             </span>
                             <span className="font-medium text-blue-500 dark:text-blue-400">
-                              {globalAttendanceThreshold}%
+                              {/* {globalAttendanceThreshold}% */}
+                              {attendanceThreshold}%
                             </span>
                           </div>
                         </div>
@@ -1363,14 +1404,16 @@ function DashboardContent() {
                               {language === "en" ? "Individual:" : "Individueel:"}
                             </span>
                             <User className="h-3 w-3 text-amber-500 dark:text-amber-400 mr-0.5" />
-                            <span className="font-medium text-amber-500 dark:text-amber-400">{individualGoal}%</span>
+                            {/* <span className="font-medium text-amber-500 dark:text-amber-400">{individualGoal}%</span> */}
+                            <span className="font-medium text-amber-500 dark:text-amber-400">{globalIndividualGoal}%</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 dark:text-gray-400">
                               {language === "en" ? "Class goal:" : "Klasdoel:"}
                             </span>
                             <span className="font-medium text-amber-500 dark:text-amber-400">
-                              {globalIndividualGoal}%
+                              {/* {globalIndividualGoal}% */}
+                              {individualGoal}%
                             </span>
                           </div>
                         </div>
@@ -1480,7 +1523,7 @@ function DashboardContent() {
                                 </div>
                                 {hasAttendanceDetailData() && (
                                   <div className="text-xs dark:text-gray-300">
-                                    <span className="font-medium">{attendanceData.unauthorized}%</span>
+                                    <span className="font-medium">{typeof attendanceData.unauthorized === "number" ? attendanceData.unauthorized : 0}%</span>
                                     <span className="text-gray-500 dark:text-gray-400 ml-1">
                                       (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
                                       {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
