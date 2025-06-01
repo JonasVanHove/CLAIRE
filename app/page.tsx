@@ -1088,10 +1088,9 @@ function DashboardContent() {
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement
                                 // @ts-ignore
-                                img._errorCount = (img._errorCount || 0) + 1
-                                // @ts-ignore
+                                (img as any)._errorCount = ((img as any)._errorCount || 0) + 1
                                 if (
-                                img._errorCount <= 3 &&
+                                (img as any)._errorCount <= 3 &&
                                 img.src !== window.location.origin + "/images/default.png"
                                 ) {
                                 img.src = "/images/default.png"
