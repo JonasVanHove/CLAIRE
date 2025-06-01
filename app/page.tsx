@@ -1,16 +1,25 @@
-"use client"
+"use client";
 
-import { SubjectCard } from "@/components/subject-card"
-import { ProgressHeader } from "@/components/progress-header"
-import { StudentSelector } from "@/components/student-selector"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SubjectCard } from "@/components/subject-card";
+import { ProgressHeader } from "@/components/progress-header";
+import { StudentSelector } from "@/components/student-selector";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Voeg imports toe voor de ChevronDown en ChevronUp iconen
-import { ChevronDown, User, FileText, Calendar, CheckCircle2, XCircle, AlertTriangle, ChevronUp } from "lucide-react"
+import {
+  ChevronDown,
+  User,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ChevronUp,
+} from "lucide-react";
 // Voeg deze imports toe bovenaan het bestand, bij de andere imports
-import { ArrowDown, ArrowUp, Clock, Activity, BarChart3 } from "lucide-react"
-import { SemesterScatterPlot } from "@/components/semester-scatter-plot"
-import { useStudent } from "@/contexts/student-context"
-import { useMemo, useState, useRef, useEffect } from "react"
+import { ArrowDown, ArrowUp, Clock, Activity, BarChart3 } from "lucide-react";
+import { SemesterScatterPlot } from "@/components/semester-scatter-plot";
+import { useStudent } from "@/contexts/student-context";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   getStudentData,
   getStudentCompetencyIssues,
@@ -20,14 +29,14 @@ import {
   getStudentIndividualGoal,
   getTotalCompetencies,
   getStudentSemesterData,
-} from "@/data/student-data"
-import { UIProvider, useUI } from "@/contexts/ui-context"
-import { SettingsMenu } from "@/components/settings-menu"
-import Image from "next/image"
-import { Progress } from "@/components/ui/progress"
-import { InfoPopup } from "@/components/info-popup"
+} from "@/data/student-data";
+import { UIProvider, useUI } from "@/contexts/ui-context";
+import { SettingsMenu } from "@/components/settings-menu";
+import Image from "next/image";
+import { Progress } from "@/components/ui/progress";
+import { InfoPopup } from "@/components/info-popup";
 // Add the import for the API service at the top of the file
-import { api } from "@/services/api"
+import { api } from "@/services/api";
 // Voeg deze import toe bij de andere imports bovenaan het bestand
 import {
   DropdownMenu,
@@ -36,25 +45,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 // Voeg deze type definitie toe na de bestaande imports
 // Definieer een type voor de sorteeroptie
 type SortOption = {
-  field: "score" | "activities" | "hours"
-  direction: "asc" | "desc"
-}
+  field: "score" | "activities" | "hours";
+  direction: "asc" | "desc";
+};
 
 // Definieer een type voor de vakgegevens met uren per week
 interface SubjectData {
-  subject: string
-  percentage: number
-  competencies: string
-  activities: number
-  distribution: number[]
-  studentBucket: number
-  status: string
-  hoursPerWeek: number // Toegevoegd veld voor uren per week
+  subject: string;
+  percentage: number;
+  competencies: string;
+  activities: number;
+  distribution: number[];
+  studentBucket: number;
+  status: string;
+  hoursPerWeek: number; // Toegevoegd veld voor uren per week
 }
 
 export default function Dashboard() {
@@ -62,59 +71,63 @@ export default function Dashboard() {
     <UIProvider>
       <DashboardContent />
     </UIProvider>
-  )
+  );
 }
 
 // Add translations object inside the DashboardContent component
 function DashboardContent() {
-  const { selectedStudent, selectedClass, setStudentData } = useStudent()
+  const { selectedStudent, selectedClass, setStudentData } = useStudent();
   // Verander deze regels:
   // const [showNotes, setShowProfile] = useState(false)
   // const [showProfile, setShowNotes] = useState(false)
 
   // Naar:
-  const [showProfile, setShowProfile] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
-  const { compactView, darkMode, language } = useUI()
-  const [activeSemester, setActiveSemester] = useState<string>("semester1")
-  const profileRef = useRef<HTMLDivElement>(null)
-  const notesRef = useRef<HTMLDivElement>(null)
+  const [showProfile, setShowProfile] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const { compactView, darkMode, language } = useUI();
+  const [activeSemester, setActiveSemester] = useState<string>("semester1");
+  const profileRef = useRef<HTMLDivElement>(null);
+  const notesRef = useRef<HTMLDivElement>(null);
 
   // Add a state for the threshold value - default to 85%
-  const [attendanceThreshold, setAttendanceThreshold] = useState(85)
-  const [individualGoal, setIndividualGoal] = useState(60)
-  const [isLoadingThresholds, setIsLoadingThresholds] = useState(false)
+  const [attendanceThreshold, setAttendanceThreshold] = useState(85);
+  // const [individualGoal, setIndividualGoal] = useState(60);
+  const [isLoadingThresholds, setIsLoadingThresholds] = useState(false);
   // Add a state for the individual goal - default to the value from the data
-  // const [individualGoal, setIndividualGoal] = useState(() => getStudentIndividualGoal(selectedStudent))
-  const [isSaving, setIsSaving] = useState(false)
-  const [isSavingGoal, setIsSavingGoal] = useState(false)
-  const thresholdInputRef = useRef<HTMLInputElement>(null)
-  const goalInputRef = useRef<HTMLInputElement>(null)
+  const [individualGoal, setIndividualGoal] = useState(() => getStudentIndividualGoal(selectedStudent))
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingGoal, setIsSavingGoal] = useState(false);
+  const thresholdInputRef = useRef<HTMLInputElement>(null);
+  const goalInputRef = useRef<HTMLInputElement>(null);
 
   // State for tracking if student is above their average
-  const [isAboveAverage, setIsAboveAverage] = useState(false)
+  const [isAboveAverage, setIsAboveAverage] = useState(false);
 
   // Voeg deze state toe in de DashboardContent functie, bij de andere useState declaraties
-  const [sortOption, setSortOption] = useState<SortOption>({ field: "hours", direction: "desc" })
+  const [sortOption, setSortOption] = useState<SortOption>({
+    field: "hours",
+    direction: "desc",
+  });
 
   // Functie om het semesternummer te extraheren uit de activeSemester string
   const getSelectedSemesterNumber = (): 1 | 2 | 3 => {
-    const match = activeSemester.match(/semester(\d)/)
+    const match = activeSemester.match(/semester(\d)/);
     if (match && ["1", "2", "3"].includes(match[1])) {
-      return Number.parseInt(match[1]) as 1 | 2 | 3
+      return Number.parseInt(match[1]) as 1 | 2 | 3;
     }
-    return 1 // Default naar semester 1 als er geen match is
-  }
+    return 1; // Default naar semester 1 als er geen match is
+  };
 
   // Get the competency percentage
-  const { achieved, total } = getTotalCompetencies(selectedStudent)
-  const percentage = (achieved / total) * 100
+  const { achieved, total } = getTotalCompetencies(selectedStudent);
+  const percentage = (achieved / total) * 100;
 
   // Add translations
   const translations = {
     en: {
       noStudentSelected: "No student selected",
-      selectStudent: "Select a student using the search field above to view semester data.",
+      selectStudent:
+        "Select a student using the search field above to view semester data.",
       positioning: "Positioning relative to fellow students",
       positioningFrom: "Positioning relative to fellow students from",
       eachDot: "Each dot represents a student.",
@@ -127,13 +140,16 @@ function DashboardContent() {
       withinTarget: "Within target",
       attendance: "Attendance",
       meetsThreshold: "meets the threshold",
-      goodAttendance: "The student has good attendance and meets the minimum requirements.",
+      goodAttendance:
+        "The student has good attendance and meets the minimum requirements.",
       authorized: "Authorized",
       unauthorized: "Unauthorized",
       attentionPoints: "Attention points",
       attendanceBelow: "Attendance is below the threshold",
-      studentMustAttend: "The student needs better attendance to meet the minimum requirements.",
-      criticalAttendance: "The student has critically low attendance that requires urgent attention.",
+      studentMustAttend:
+        "The student needs better attendance to meet the minimum requirements.",
+      criticalAttendance:
+        "The student has critically low attendance that requires urgent attention.",
       competencyIssues: "Competency issues:",
       needsGuidance: "This student needs extra guidance.",
       status: "Status",
@@ -183,7 +199,8 @@ function DashboardContent() {
     },
     nl: {
       noStudentSelected: "Geen leerling geselecteerd",
-      selectStudent: "Selecteer een leerling via het zoekveld bovenaan om de semestergegevens te bekijken.",
+      selectStudent:
+        "Selecteer een leerling via het zoekveld bovenaan om de semestergegevens te bekijken.",
       positioning: "Positionering ten opzichte van medestudenten",
       positioningFrom: "Positionering ten opzichte van medestudenten uit",
       eachDot: "Elke stip vertegenwoordigt een student.",
@@ -196,13 +213,16 @@ function DashboardContent() {
       withinTarget: "Binnen doelstelling",
       attendance: "Aanwezigheid",
       meetsThreshold: "voldoet aan de grenswaarde",
-      goodAttendance: "De leerling heeft een goede aanwezigheidsgraad en voldoet aan de minimumvereisten.",
+      goodAttendance:
+        "De leerling heeft een goede aanwezigheidsgraad en voldoet aan de minimumvereisten.",
       authorized: "Gewettigd",
       unauthorized: "Ongewettigd",
       attentionPoints: "Aandachtspunten",
       attendanceBelow: "Aanwezigheid is onder de grenswaarde",
-      studentMustAttend: "De leerling moet beter aanwezig zijn om aan de minimumvereisten te voldoen.",
-      criticalAttendance: "De leerling heeft een kritisch lage aanwezigheid die dringend aandacht vereist.",
+      studentMustAttend:
+        "De leerling moet beter aanwezig zijn om aan de minimumvereisten te voldoen.",
+      criticalAttendance:
+        "De leerling heeft een kritisch lage aanwezigheid die dringend aandacht vereist.",
       competencyIssues: "Competentie-issues:",
       needsGuidance: "Deze leerling heeft extra begeleiding nodig.",
       status: "Status",
@@ -250,10 +270,10 @@ function DashboardContent() {
       atRiskRule: "Risico: competentiebehaald onder individuele doelstelling",
       attendanceRiskRule: "Aanwezigheidsrisico: aanwezigheid onder grenswaarde",
     },
-  }
+  };
 
   // Get translations based on current language
-  const t = translations[language]
+  const t = translations[language];
 
   // Near the beginning of the DashboardContent component, add this check
   useEffect(() => {
@@ -262,62 +282,74 @@ function DashboardContent() {
       // You could set a default view or show a message
       // For now, we'll just let the UI handle the empty state
     }
-  }, [selectedStudent])
+  }, [selectedStudent]);
 
   // Calculate if student is above their average
   useEffect(() => {
     // Bereken het gemiddelde van de vorige semesters
-    const semester1Data = getStudentSemesterData(selectedStudent, 1)
-    const semester2Data = getStudentSemesterData(selectedStudent, 2)
-    const semester3Data = getStudentSemesterData(selectedStudent, 3)
+    const semester1Data = getStudentSemesterData(selectedStudent, 1);
+    const semester2Data = getStudentSemesterData(selectedStudent, 2);
+    const semester3Data = getStudentSemesterData(selectedStudent, 3);
 
     // Bereken gemiddelde scores per semester
     const getAverageScore = (data: any[]) => {
-      if (data.length === 0) return 0
-      const sum = data.reduce((acc, item) => acc + item.result.score.raw, 0)
-      return sum / data.length
-    }
+      if (data.length === 0) return 0;
+      const sum = data.reduce((acc, item) => acc + item.result.score.raw, 0);
+      return sum / data.length;
+    };
 
-    const avg1 = getAverageScore(semester1Data)
-    const avg2 = getAverageScore(semester2Data)
-    const avg3 = getAverageScore(semester3Data)
+    const avg1 = getAverageScore(semester1Data);
+    const avg2 = getAverageScore(semester2Data);
+    const avg3 = getAverageScore(semester3Data);
 
     // Bereken het gemiddelde van alle semesters
-    const overallAvg = (avg1 + avg2 + avg3) / 3
+    const overallAvg = (avg1 + avg2 + avg3) / 3;
 
     // Bepaal of de huidige score rond of boven het gemiddelde ligt
     // We beschouwen 'rond het gemiddelde' als binnen 5% van het gemiddelde
-    const scoreDeviation = Math.abs(percentage - overallAvg)
-    const isWithinAverage = scoreDeviation <= 5 || percentage >= overallAvg
-    setIsAboveAverage(isWithinAverage)
-  }, [selectedStudent, percentage])
+    const scoreDeviation = Math.abs(percentage - overallAvg);
+    const isWithinAverage = scoreDeviation <= 5 || percentage >= overallAvg;
+    setIsAboveAverage(isWithinAverage);
+  }, [selectedStudent, percentage]);
 
   // Close popups when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setShowProfile(false)
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setShowProfile(false);
       }
-      if (notesRef.current && !notesRef.current.contains(event.target as Node)) {
-        setShowNotes(false)
+      if (
+        notesRef.current &&
+        !notesRef.current.contains(event.target as Node)
+      ) {
+        setShowNotes(false);
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Update individual goal when selected student changes
   useEffect(() => {
-    setIndividualGoal(60) // Default to 60% instead of using getStudentIndividualGoal
-  }, [selectedStudent])
+    setIndividualGoal(60); // Default to 60% instead of using getStudentIndividualGoal
+  }, [selectedStudent]);
 
   // Replace the semesterScores useMemo with API calls
-  const [semester1Data, setSemester1Data] = useState<{ name: string; score: number; isCurrentStudent: boolean; }[]>([])
-  const [semester2Data, setSemester2Data] = useState<{ name: string; score: number; isCurrentStudent: boolean; }[]>([])
-  const [semester3Data, setSemester3Data] = useState<{ name: string; score: number; isCurrentStudent: boolean; }[]>([])
+  const [semester1Data, setSemester1Data] = useState<
+    { name: string; score: number; isCurrentStudent: boolean }[]
+  >([]);
+  const [semester2Data, setSemester2Data] = useState<
+    { name: string; score: number; isCurrentStudent: boolean }[]
+  >([]);
+  const [semester3Data, setSemester3Data] = useState<
+    { name: string; score: number; isCurrentStudent: boolean }[]
+  >([]);
 
   useEffect(() => {
     if (selectedStudent && selectedClass) {
@@ -328,50 +360,52 @@ function DashboardContent() {
             api.getSemesterScores(selectedClass, 1, selectedStudent),
             api.getSemesterScores(selectedClass, 2, selectedStudent),
             api.getSemesterScores(selectedClass, 3, selectedStudent),
-          ])
+          ]);
 
-          setSemester1Data(sem1.scores)
-          setSemester2Data(sem2.scores)
-          setSemester3Data(sem3.scores)
+          setSemester1Data(sem1.scores);
+          setSemester2Data(sem2.scores);
+          setSemester3Data(sem3.scores);
         } catch (error) {
-          console.error("Error fetching semester scores:", error)
+          console.error("Error fetching semester scores:", error);
         }
-      }
+      };
 
-      fetchSemesterData()
+      fetchSemesterData();
     }
-  }, [selectedStudent, selectedClass])
+  }, [selectedStudent, selectedClass]);
 
   const semesterScores = useMemo(() => {
-    return [semester1Data, semester2Data, semester3Data]
-  }, [semester1Data, semester2Data, semester3Data])
+    return [semester1Data, semester2Data, semester3Data];
+  }, [semester1Data, semester2Data, semester3Data]);
 
   // Get student's subject data
   const studentData = useMemo(() => {
-    return getStudentData(selectedStudent)
-  }, [selectedStudent])
+    return getStudentData(selectedStudent);
+  }, [selectedStudent]);
 
   // Get consistent attendance data
   // Define a type for attendance data to include all expected fields
   type AttendanceData = {
-    present: number
-    late: number
-    unauthorized: number
-    authorized: number
-    [key: string]: number
-  }
+    present: number;
+    late: number;
+    unauthorized: number;
+    authorized: number;
+    [key: string]: number;
+  };
 
   const attendanceData = useMemo<AttendanceData>(() => {
     // Ensure attendanceData always has present, late, unauthorized, and authorized fields
-    const data = getStudentAttendance(selectedStudent) as Partial<AttendanceData> | undefined
+    const data = getStudentAttendance(selectedStudent) as
+      | Partial<AttendanceData>
+      | undefined;
     return {
       present: data?.present ?? 0,
       late: data?.late ?? 0,
       unauthorized: data?.unauthorized ?? 0,
       authorized: data?.authorized ?? 0,
       // Add any other fields you expect to use
-    }
-  }, [selectedStudent])
+    };
+  }, [selectedStudent]);
 
   // Voeg deze functie toe in de DashboardContent functie, voor de renderSemester functie
   // Functie om uren per week te bepalen op basis van het vak
@@ -393,10 +427,10 @@ function DashboardContent() {
       "Toegepaste informatica": 3,
       Thermodynamica: 3,
       "Project STEM": 4,
-    }
+    };
 
-    return hoursMap[subject] || Math.floor(Math.random() * 4) + 1 // Fallback naar random 1-4 uren
-  }
+    return hoursMap[subject] || Math.floor(Math.random() * 4) + 1; // Fallback naar random 1-4 uren
+  };
 
   // Wijzig de handleSortChange functie om alleen het veld te wijzigen, niet de richting
   // Voeg deze functie toe in de DashboardContent functie, voor de renderSemester functie
@@ -405,12 +439,12 @@ function DashboardContent() {
     setSortOption((prev) => {
       // Als een nieuw veld wordt geselecteerd, behoud de huidige richting
       if (prev.field !== field) {
-        return { field, direction: prev.direction }
+        return { field, direction: prev.direction };
       }
       // Als hetzelfde veld wordt geselecteerd, behoud alles
-      return prev
-    })
-  }
+      return prev;
+    });
+  };
 
   // Wijzig de semesterSubjects useMemo functie om hoursPerWeek toe te voegen
   // Vervang de bestaande semesterSubjects useMemo functie met deze:
@@ -419,12 +453,12 @@ function DashboardContent() {
       1: [] as SubjectData[],
       2: [] as SubjectData[],
       3: [] as SubjectData[],
-    }
+    };
 
     studentData.forEach((statement) => {
-      const semester = statement.object.definition.semester
-      const subject = statement.object.definition.name.nl
-      const studentScore = statement.result.score.raw
+      const semester = statement.object.definition.semester;
+      const subject = statement.object.definition.name.nl;
+      const studentScore = statement.result.score.raw;
 
       if (semester >= 1 && semester <= 3) {
         // Get the class distribution for this subject
@@ -432,61 +466,80 @@ function DashboardContent() {
           selectedClass,
           subject,
           semester,
-          studentScore,
-        )
+          studentScore
+        );
 
         // Genereer een consistente waarde voor uren per week op basis van het vak
         // In een echte implementatie zou dit uit de database komen
-        const hoursPerWeek = getHoursPerWeek(subject)
+        const hoursPerWeek = getHoursPerWeek(subject);
 
         result[semester].push({
           subject: subject,
           percentage: studentScore,
-          competencies: `${statement.result.competencies?.achieved || 0}/${statement.result.competencies?.total || 0}`,
+          competencies: `${statement.result.competencies?.achieved || 0}/${
+            statement.result.competencies?.total || 0
+          }`,
           activities: statement.result.activities || 0,
           distribution: distribution,
           studentBucket: studentBucket,
-          status: studentScore < 50 ? "danger" : studentScore < 70 ? "warning" : "success",
+          status:
+            studentScore < 50
+              ? "danger"
+              : studentScore < 70
+              ? "warning"
+              : "success",
           hoursPerWeek: hoursPerWeek,
-        })
+        });
       }
-    })
+    });
 
-    return result
-  }, [studentData, selectedClass])
+    return result;
+  }, [studentData, selectedClass]);
 
   // Get main subjects for the student
   const mainSubjects = useMemo(() => {
-    const subjects = ["Wiskunde", "Nederlands", "Frans", "Engels"]
-    const result: { subject: string; score: number; status: string; competencies: string }[] = []
+    const subjects = ["Wiskunde", "Nederlands", "Frans", "Engels"];
+    const result: {
+      subject: string;
+      score: number;
+      status: string;
+      competencies: string;
+    }[] = [];
 
     // Haal het huidige geselecteerde semesternummer op
-    const selectedSemester = getSelectedSemesterNumber()
+    const selectedSemester = getSelectedSemesterNumber();
 
     subjects.forEach((subjectName) => {
       const subjectData = studentData.find(
-        (s) => s.object.definition.name.nl === subjectName && s.object.definition.semester === selectedSemester,
-      )
+        (s) =>
+          s.object.definition.name.nl === subjectName &&
+          s.object.definition.semester === selectedSemester
+      );
 
       if (subjectData) {
         // Haal de competentie-informatie op
-        const achieved = subjectData.result.competencies?.achieved || 0
-        const total = subjectData.result.competencies?.total || 1
+        const achieved = subjectData.result.competencies?.achieved || 0;
+        const total = subjectData.result.competencies?.total || 1;
         // Bereken het percentage op basis van behaalde competenties
-        const competencyScore = Math.round((achieved / total) * 100)
-        const competencies = `${achieved}/${total}`
+        const competencyScore = Math.round((achieved / total) * 100);
+        const competencies = `${achieved}/${total}`;
 
         result.push({
           subject: subjectName,
           score: competencyScore,
           competencies,
-          status: competencyScore < 50 ? "danger" : competencyScore < 70 ? "warning" : "success",
-        })
+          status:
+            competencyScore < 50
+              ? "danger"
+              : competencyScore < 70
+              ? "warning"
+              : "success",
+        });
       }
-    })
+    });
 
-    return result
-  }, [studentData, activeSemester]) // Voeg activeSemester toe als dependency
+    return result;
+  }, [studentData, activeSemester]); // Voeg activeSemester toe als dependency
 
   // Voeg deze functie toe voor het bepalen van de ingeschreven jaren
   const getEnrollmentYears = (studentName: string) => {
@@ -494,80 +547,80 @@ function DashboardContent() {
     // Voor nu simuleren we dit met wat logica
 
     // Bepaal het huidige schooljaar (bijv. 2023-2024)
-    const currentYear = 2023
+    const currentYear = 2023;
 
     // Bepaal in welk jaar de student zit (3STEM = 3e jaar)
-    const currentGrade = Number.parseInt(selectedClass.charAt(0)) || 3
+    const currentGrade = Number.parseInt(selectedClass.charAt(0)) || 3;
 
     // Bereken wanneer de student begonnen is
-    const startYear = currentYear - (currentGrade - 1)
+    const startYear = currentYear - (currentGrade - 1);
 
     // Genereer de jaren waarin de student ingeschreven was
-    const years = []
+    const years = [];
     for (let i = 0; i < currentGrade; i++) {
-      const year = startYear + i
-      years.push(`${year}-${year + 1}`)
+      const year = startYear + i;
+      years.push(`${year}-${year + 1}`);
     }
 
     // Bepaal de graad
-    let grade
+    let grade;
     if (currentGrade <= 2) {
-      grade = 1
+      grade = 1;
     } else if (currentGrade <= 4) {
-      grade = 2
+      grade = 2;
     } else {
-      grade = 3
+      grade = 3;
     }
 
     return {
       years,
       grade,
       currentGrade,
-    }
-  }
+    };
+  };
 
   // Functie om te controleren of afwezigheidsdata beschikbaar is
   const hasAttendanceDetailData = () => {
     // Expliciet aangeven dat we geen gedetailleerde afwezigheidsdata hebben
-    return false
-  }
+    return false;
+  };
 
   // Voeg deze regel toe aan het profiel gedeelte, na de Calendar regel
-  const enrollmentInfo = getEnrollmentYears(selectedStudent)
+  const enrollmentInfo = getEnrollmentYears(selectedStudent);
 
   // Haal de profielafbeelding op
-  const profileImage = getStudentProfileImage(selectedStudent)
+  const profileImage = getStudentProfileImage(selectedStudent);
 
   // Haal de competentie-issues op
-  const competencyIssues = getStudentCompetencyIssues(selectedStudent)
+  const competencyIssues = getStudentCompetencyIssues(selectedStudent);
 
   // Vervang de renderSemester functie met deze nieuwe versie
   // Render een semester with its subjects
   const renderSemester = (semesterNum: number, isActive: boolean) => {
     // Each subject shown here belongs to this specific semester
     // This relationship is defined in the database and cannot be changed
-    const subjects = semesterSubjects[semesterNum as 1 | 2 | 3]
+    const subjects = semesterSubjects[semesterNum as 1 | 2 | 3];
 
     // Sorteer de vakken op basis van de huidige sorteeroptie
     const sortedSubjects = [...subjects].sort((a, b) => {
-      let comparison = 0
+      let comparison = 0;
 
       // Bepaal welk veld we vergelijken
       switch (sortOption.field) {
         case "score":
-          comparison = a.percentage - b.percentage
-          break
+          comparison = a.percentage - b.percentage;
+          break;
         case "activities":
-          comparison = a.activities - b.activities
-          break
+          comparison = a.activities - b.activities;
+          break;
         case "hours":
-          comparison = a.hoursPerWeek - b.hoursPerWeek
-          break
+          comparison = a.hoursPerWeek - b.hoursPerWeek;
+          break;
       }
 
       // Pas de sorteervolgorde toe
-      return sortOption.direction === "asc" ? comparison : -comparison
-    })
+      return sortOption.direction === "asc" ? comparison : -comparison;
+    });
 
     return (
       <div
@@ -584,7 +637,9 @@ function DashboardContent() {
         {!isActive && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-100/30 dark:bg-gray-900/30">
             <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-md text-center">
-              <p className="text-gray-700 dark:text-gray-300 font-medium">{t.clickTab}</p>
+              <p className="text-gray-700 dark:text-gray-300 font-medium">
+                {t.clickTab}
+              </p>
             </div>
           </div>
         )}
@@ -606,7 +661,9 @@ function DashboardContent() {
               activities={subject.activities}
               distribution={subject.distribution}
               studentBucket={subject.studentBucket}
-              status={subject.status as "danger" | "warning" | "success" | undefined}
+              status={
+                subject.status as "danger" | "warning" | "success" | undefined
+              }
               isActive={isActive}
               compact={false}
               className="h-48" // Make cards taller
@@ -616,347 +673,416 @@ function DashboardContent() {
           ))}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Replace the handleSaveAttendanceThreshold function with API call
   const handleSaveAttendanceThreshold = async () => {
-    if (!thresholdInputRef.current || !selectedStudent) return
+    if (!thresholdInputRef.current || !selectedStudent) return;
 
-    const newThreshold = Number.parseInt(thresholdInputRef.current.value)
+    const newThreshold = Number.parseInt(thresholdInputRef.current.value);
     if (isNaN(newThreshold) || newThreshold < 50 || newThreshold > 100) {
-      alert(t.enterValidValue)
-      return
+      alert(t.enterValidValue);
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       // Use the API service to update the attendance threshold
-      const result = await api.updateAttendanceThreshold(selectedStudent, newThreshold)
+      const result = await api.updateAttendanceThreshold(
+        selectedStudent,
+        newThreshold
+      );
 
       if (result.success) {
         // Update local state after successful save
-        setAttendanceThreshold(newThreshold)
+        setAttendanceThreshold(newThreshold);
 
         // Save to student profile in localStorage instead of class thresholds
         try {
           // Get existing student profiles or initialize empty object
-          const studentProfilesJSON = localStorage.getItem("studentProfiles")
-          const studentProfiles = studentProfilesJSON ? JSON.parse(studentProfilesJSON) : {}
+          const studentProfilesJSON = localStorage.getItem("studentProfiles");
+          const studentProfiles = studentProfilesJSON
+            ? JSON.parse(studentProfilesJSON)
+            : {};
 
           // Update or create this student's profile
           studentProfiles[selectedStudent] = {
             ...(studentProfiles[selectedStudent] || {}),
             attendanceThreshold: newThreshold,
-          }
+          };
 
           // Save back to localStorage
-          localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+          localStorage.setItem(
+            "studentProfiles",
+            JSON.stringify(studentProfiles)
+          );
 
-          console.log(`Saved attendance threshold ${newThreshold}% for student: ${selectedStudent}`)
+          console.log(
+            `Saved attendance threshold ${newThreshold}% for student: ${selectedStudent}`
+          );
         } catch (error) {
-          console.error("Error updating student profile in localStorage:", error)
+          console.error(
+            "Error updating student profile in localStorage:",
+            error
+          );
         }
 
         // Show success message
-        alert(t.thresholdSaved)
+        alert(t.thresholdSaved);
       } else {
-        throw new Error("Failed to save threshold")
+        throw new Error("Failed to save threshold");
       }
     } catch (error) {
-      console.error("Error saving threshold:", error)
-      alert(t.errorSaving)
+      console.error("Error saving threshold:", error);
+      alert(t.errorSaving);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Find the handleSaveIndividualGoal function and replace it with this updated version
   // that saves to student profile instead of class thresholds
   const handleSaveIndividualGoal = async () => {
-    if (!goalInputRef.current) return
+    if (!goalInputRef.current || !selectedStudent) return;
 
-    const newGoal = Number.parseInt(goalInputRef.current.value)
+    const newGoal = Number.parseInt(goalInputRef.current.value);
     if (isNaN(newGoal) || newGoal < 50 || newGoal > 100) {
-      alert(t.enterValidValue)
-      return
+      alert(t.enterValidValue);
+      return;
     }
 
-    setIsSavingGoal(true)
+    setIsSavingGoal(true);
 
     try {
       // Use the API service to update the individual goal
-      const result = await api.updateIndividualGoal(selectedStudent, newGoal)
+      const result = await api.updateIndividualGoal(
+        selectedStudent, 
+        newGoal
+      );
 
       if (result.success) {
         // Update local state after successful save
-        setIndividualGoal(newGoal)
+        setIndividualGoal(newGoal);
 
-        // Save to student profile in localStorage instead of class thresholds
+        // Save to `localStorage` under `studentProfiles`
         try {
-          // Get existing student profiles or initialize empty object
-          const studentProfilesJSON = localStorage.getItem("studentProfiles")
-          const studentProfiles = studentProfilesJSON ? JSON.parse(studentProfilesJSON) : {}
+          const studentProfilesJSON = localStorage.getItem("studentProfiles");
+          const studentProfiles = studentProfilesJSON
+            ? JSON.parse(studentProfilesJSON)
+            : {};
 
           // Update or create this student's profile
           studentProfiles[selectedStudent] = {
             ...(studentProfiles[selectedStudent] || {}),
             individualGoal: newGoal,
-          }
+          };
 
-          // Save back to localStorage
-          localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+          // Save back to `localStorage`
+          localStorage.setItem(
+            "studentProfiles",
+            JSON.stringify(studentProfiles)
+          );
+
+          console.log(
+            `Saved individual goal ${newGoal}% for student: ${selectedStudent}`
+          );
         } catch (error) {
-          console.error("Error updating student profile in localStorage:", error)
+          console.error(
+            "Error updating student profile in localStorage:",
+            error
+          );
         }
 
         // Show success message
-        alert(t.personalGoal + "!")
+        alert(t.personalGoal + "!");
       } else {
-        throw new Error("Failed to save goal")
+        throw new Error("Failed to save goal");
       }
     } catch (error) {
-      console.error("Error saving goal:", error)
-      alert(t.errorSaving)
+      console.error("Error saving goal:", error);
+      alert(t.errorSaving);
     } finally {
-      setIsSavingGoal(false)
+      setIsSavingGoal(false);
     }
-  }
+  };
 
   // Voeg state toe voor het bijhouden van uitgeklapte secties (na de andere useState declaraties)
-  const [expandedAttendance, setExpandedAttendance] = useState(false)
-  const [expandedAttentionPoints, setExpandedAttentionPoints] = useState(false)
-  const [expandedStatus, setExpandedStatus] = useState(false)
+  const [expandedAttendance, setExpandedAttendance] = useState(false);
+  const [expandedAttentionPoints, setExpandedAttentionPoints] = useState(false);
+  const [expandedStatus, setExpandedStatus] = useState(false);
 
   // Helper functie om status indicator te tonen
   const getStatusIndicator = (status: string, score: number) => {
     switch (status) {
       case "danger":
-        return <span className="font-medium text-red-600 dark:text-red-400">{score}%</span>
+        return (
+          <span className="font-medium text-red-600 dark:text-red-400">
+            {score}%
+          </span>
+        );
       case "warning":
-        return <span className="font-medium text-amber-600 dark:text-amber-400">{score}%</span>
+        return (
+          <span className="font-medium text-amber-600 dark:text-amber-400">
+            {score}%
+          </span>
+        );
       default:
-        return <span className="font-medium text-green-600 dark:text-green-400">{score}%</span>
+        return (
+          <span className="font-medium text-green-600 dark:text-green-400">
+            {score}%
+          </span>
+        );
     }
-  }
+  };
 
   // Add event listener to handle threshold updates and refresh student data
-  const [isLoadingStudentData, setIsLoadingStudentData] = useState(false)
+  const [isLoadingStudentData, setIsLoadingStudentData] = useState(false);
   // const { setStudentData } = useStudent() // Remove fetchStudentData as it doesn't exist
 
   useEffect(() => {
     // Function to handle the refresh event
     const handleRefreshStudentData = async (event: Event) => {
-      if (!selectedStudent) return
+      if (!selectedStudent) return;
 
       // Cast to CustomEvent to access .detail
-      const customEvent = event as CustomEvent
+      const customEvent = event as CustomEvent;
 
       // Show loading state
-      setIsLoadingStudentData(true)
+      setIsLoadingStudentData(true);
 
       try {
         // Fetch updated student data with new thresholds
-        const studentData = await api.getStudentDetails(selectedStudent, selectedClass)
+        const studentData = await api.getStudentDetails(
+          selectedStudent,
+          selectedClass
+        );
 
         // Update the student context with the fetched data
         setStudentData({
           ...studentData,
           atRiskReason: studentData.atRiskReason ?? "",
-        })
+        });
 
         // Update local threshold values if they were changed
         if (customEvent.detail?.thresholdsUpdated) {
           if (customEvent.detail.attendanceThreshold) {
-            setAttendanceThreshold(customEvent.detail.attendanceThreshold)
+            setAttendanceThreshold(customEvent.detail.attendanceThreshold);
           }
           if (customEvent.detail.individualGoal) {
-            setIndividualGoal(customEvent.detail.individualGoal)
+            setIndividualGoal(customEvent.detail.individualGoal);
           }
         }
 
         // Reload thresholds from database
-        loadThresholdsFromDB()
+        loadThresholdsFromDB();
       } catch (error) {
-        console.error("Error refreshing student data:", error)
+        console.error("Error refreshing student data:", error);
       } finally {
-        setIsLoadingStudentData(false)
+        setIsLoadingStudentData(false);
       }
-    }
+    };
 
     // Add event listener for the custom event
-    window.addEventListener("refreshStudentData", handleRefreshStudentData)
+    window.addEventListener("refreshStudentData", handleRefreshStudentData);
 
     // Clean up the event listener when component unmounts
     return () => {
-      window.removeEventListener("refreshStudentData", handleRefreshStudentData)
-    }
-  }, [selectedStudent, selectedClass, setStudentData])
+      window.removeEventListener(
+        "refreshStudentData",
+        handleRefreshStudentData
+      );
+    };
+  }, [selectedStudent, selectedClass, setStudentData]);
 
   // Add state for global thresholds
-  const [globalAttendanceThreshold, setGlobalAttendanceThreshold] = useState(85)
-  const [globalIndividualGoal, setGlobalIndividualGoal] = useState(60)
+  const [globalAttendanceThreshold, setGlobalAttendanceThreshold] =
+    useState(85);
+  const [globalIndividualGoal, setGlobalIndividualGoal] = useState(60);
 
   // Update the loadThresholdsFromDB function to load from student profile
   const loadThresholdsFromDB = async () => {
-    if (!selectedClass) return
+    if (!selectedClass) return;
 
-    setIsLoadingThresholds(true)
+    setIsLoadingThresholds(true);
     try {
       // Load global and class thresholds first
-      const classThresholdsJSON = localStorage.getItem("classThresholds")
-      const globalAttendanceThresholdValue = localStorage.getItem("globalAttendanceThreshold")
+      const classThresholdsJSON = localStorage.getItem("classThresholds");
+      const globalAttendanceThresholdValue = localStorage.getItem(
+        "globalAttendanceThreshold"
+      );
 
-      let classThreshold = 80 // Default value
+      let classThreshold = 80; // Default value
 
       if (classThresholdsJSON) {
-        const classThresholds = JSON.parse(classThresholdsJSON)
+        const classThresholds = JSON.parse(classThresholdsJSON);
 
         // Find the thresholds for the current class
-        const classThresholdObj = classThresholds.find((cls: any) => cls.className === selectedClass)
+        const classThresholdObj = classThresholds.find(
+          (cls: any) => cls.className === selectedClass
+        );
 
         if (classThresholdObj) {
           // Use the class-specific attendance threshold
-          classThreshold = classThresholdObj.attendanceThreshold
+          classThreshold = classThresholdObj.attendanceThreshold;
           console.log(
             `Loaded attendance threshold for ${selectedClass} from database:`,
-            classThresholdObj.attendanceThreshold,
-          )
+            classThresholdObj.attendanceThreshold
+          );
         }
 
         // Also load global thresholds for display purposes
-        const globalSettings = classThresholds.find((cls: any) => cls.className === "global")
+        const globalSettings = classThresholds.find(
+          (cls: any) => cls.className === "global"
+        );
         if (globalSettings) {
-          setGlobalAttendanceThreshold(globalSettings.attendanceThreshold || 85)
-          setGlobalIndividualGoal(globalSettings.individualGoal || 70)
+          setGlobalAttendanceThreshold(
+            globalSettings.attendanceThreshold || 85
+          );
+          setGlobalIndividualGoal(globalSettings.individualGoal || 70);
         }
       }
 
       // Now check if the selected student has a custom threshold
       if (selectedStudent) {
-        const studentProfilesJSON = localStorage.getItem("studentProfiles")
+        const studentProfilesJSON = localStorage.getItem("studentProfiles");
         type StudentProfile = {
-          attendanceThreshold?: number
-          individualGoal?: number
-          [key: string]: any
-        }
+          attendanceThreshold?: number;
+          individualGoal?: number;
+          [key: string]: any;
+        };
         type StudentProfiles = {
-          [studentName: string]: StudentProfile
-        }
-        let studentProfiles: StudentProfiles = {}
+          [studentName: string]: StudentProfile;
+        };
+        let studentProfiles: StudentProfiles = {};
         if (studentProfilesJSON) {
-          studentProfiles = JSON.parse(studentProfilesJSON)
-  
-          if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].attendanceThreshold) {
+          studentProfiles = JSON.parse(studentProfilesJSON);
+
+          if (
+            studentProfiles[selectedStudent] &&
+            studentProfiles[selectedStudent].attendanceThreshold
+          ) {
             // Use student-specific threshold if available
-            setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
+            setAttendanceThreshold(
+              studentProfiles[selectedStudent].attendanceThreshold
+            );
             console.log(
               `Loaded student-specific attendance threshold for ${selectedStudent}:`,
-              studentProfiles[selectedStudent].attendanceThreshold,
-            )
+              studentProfiles[selectedStudent].attendanceThreshold
+            );
           } else {
             // If no student-specific threshold, use class threshold
-            setAttendanceThreshold(classThreshold)
+            setAttendanceThreshold(classThreshold);
             console.log(
-              `No student-specific threshold found for ${selectedStudent}, using class threshold: ${classThreshold}`,
-            )
+              `No student-specific threshold found for ${selectedStudent}, using class threshold: ${classThreshold}`
+            );
           }
-  
+
           // Load individual goal from student profile if available
-          if (studentProfiles[selectedStudent] && studentProfiles[selectedStudent].individualGoal) {
-            setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
+          if (
+            studentProfiles[selectedStudent] &&
+            studentProfiles[selectedStudent].individualGoal
+          ) {
+            setIndividualGoal(studentProfiles[selectedStudent].individualGoal);
             console.log(
               `Loaded individual goal for ${selectedStudent} from profile:`,
-              studentProfiles[selectedStudent].individualGoal,
-            )
+              studentProfiles[selectedStudent].individualGoal
+            );
           } else {
             // If no individual goal in profile, fall back to the default from data
-            setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+            setIndividualGoal(getStudentIndividualGoal(selectedStudent));
           }
         } else {
           // If no profiles exist, use class threshold and default individual goal
-          setAttendanceThreshold(classThreshold)
-          setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+          setAttendanceThreshold(classThreshold);
+          setIndividualGoal(getStudentIndividualGoal(selectedStudent));
         }
       } else {
         // If no student selected, use class threshold
-        setAttendanceThreshold(classThreshold)
+        setAttendanceThreshold(classThreshold);
       }
 
       // Load global parameters for attendance threshold
       try {
         // First try to get from global parameters
-        const globalParamsJSON = localStorage.getItem("globalParameters")
+        const globalParamsJSON = localStorage.getItem("globalParameters");
         if (globalParamsJSON) {
-          const globalParams = JSON.parse(globalParamsJSON)
+          const globalParams = JSON.parse(globalParamsJSON);
           if (globalParams.attendanceThreshold) {
-            setGlobalAttendanceThreshold(Number(globalParams.attendanceThreshold))
-            console.log("Loaded global attendance threshold from Global Parameters:", globalParams.attendanceThreshold)
+            setGlobalAttendanceThreshold(
+              Number(globalParams.attendanceThreshold)
+            );
+            console.log(
+              "Loaded global attendance threshold from Global Parameters:",
+              globalParams.attendanceThreshold
+            );
           }
         } else if (globalAttendanceThresholdValue) {
           // Fall back to legacy storage if global parameters not found
-          setGlobalAttendanceThreshold(Number(globalAttendanceThresholdValue))
+          setGlobalAttendanceThreshold(Number(globalAttendanceThresholdValue));
         }
       } catch (error) {
-        console.error("Error loading global parameters:", error)
+        console.error("Error loading global parameters:", error);
       }
     } catch (error) {
-      console.error("Error loading thresholds from database:", error)
+      console.error("Error loading thresholds from database:", error);
       // Fall back to default values if there's an error
       if (selectedStudent) {
-        setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+        setIndividualGoal(getStudentIndividualGoal(selectedStudent));
       }
-      setAttendanceThreshold(85) // Default attendance threshold
+      setAttendanceThreshold(85); // Default attendance threshold
     } finally {
-      setIsLoadingThresholds(false)
+      setIsLoadingThresholds(false);
     }
-  }
+  };
 
   // Add this useEffect to reset thresholds when the selected student changes
   useEffect(() => {
     if (selectedStudent) {
       // Reset loading state
-      setIsLoadingThresholds(true)
+      setIsLoadingThresholds(true);
 
       // Load student-specific thresholds
-      const studentProfilesJSON = localStorage.getItem("studentProfiles")
-      let studentProfiles: { [key: string]: any } = {}
+      const studentProfilesJSON = localStorage.getItem("studentProfiles");
+      let studentProfiles: { [key: string]: any } = {};
       if (studentProfilesJSON) {
-        studentProfiles = JSON.parse(studentProfilesJSON)
+        studentProfiles = JSON.parse(studentProfilesJSON);
       }
 
       if (studentProfiles[selectedStudent]) {
         // Load student-specific attendance threshold if available
         if (studentProfiles[selectedStudent].attendanceThreshold) {
-          setAttendanceThreshold(studentProfiles[selectedStudent].attendanceThreshold)
+          setAttendanceThreshold(
+            studentProfiles[selectedStudent].attendanceThreshold
+          );
           console.log(
             `Loaded student-specific attendance threshold for ${selectedStudent}:`,
-            studentProfiles[selectedStudent].attendanceThreshold,
-          )
+            studentProfiles[selectedStudent].attendanceThreshold
+          );
         } else {
           // Otherwise load from class or global settings
-          loadThresholdsFromDB()
+          loadThresholdsFromDB();
         }
 
         // Load student-specific individual goal if available
         if (studentProfiles[selectedStudent].individualGoal) {
-          setIndividualGoal(studentProfiles[selectedStudent].individualGoal)
+          setIndividualGoal(studentProfiles[selectedStudent].individualGoal);
         } else {
-          setIndividualGoal(getStudentIndividualGoal(selectedStudent))
+          setIndividualGoal(getStudentIndividualGoal(selectedStudent));
         }
       } else {
         // If no profile exists for this student, load from class or global settings
-        loadThresholdsFromDB()
+        loadThresholdsFromDB();
       }
-      setIsLoadingThresholds(false)
+      setIsLoadingThresholds(false);
     }
-  }, [selectedStudent])
+  }, [selectedStudent]);
 
   // Update the useEffect that loads thresholds to use the new function
   useEffect(() => {
-    loadThresholdsFromDB()
-  }, [selectedClass, selectedStudent])
+    loadThresholdsFromDB();
+  }, [selectedClass, selectedStudent]);
 
   // Now update the attendance threshold section to show the correct global value
   // Replace with:
@@ -971,9 +1097,12 @@ function DashboardContent() {
   // Replace with:
 
   // Function to check if attendance is below threshold - used by both profile and student filter
-  const isAttendanceBelowThreshold = (attendance: number, threshold: number) => {
-    return attendance < threshold
-  }
+  const isAttendanceBelowThreshold = (
+    attendance: number,
+    threshold: number
+  ) => {
+    return attendance < threshold;
+  };
 
   // Verbeter de event emitter voor attendance data
   // Vervang de bestaande useEffect voor het verzenden van attendance data:
@@ -982,7 +1111,7 @@ function DashboardContent() {
   useEffect(() => {
     if (selectedStudent && attendanceData) {
       // Check if attendance is below threshold
-      const isBelow = attendanceData.present < attendanceThreshold
+      const isBelow = attendanceData.present < attendanceThreshold;
 
       // Create and dispatch a custom event with the attendance data
       const event = new CustomEvent("updateStudentAttendance", {
@@ -992,10 +1121,10 @@ function DashboardContent() {
           isBelowThreshold: isBelow,
           threshold: attendanceThreshold,
         },
-      })
-      window.dispatchEvent(event)
+      });
+      window.dispatchEvent(event);
     }
-  }, [selectedStudent, attendanceData, attendanceThreshold])
+  }, [selectedStudent, attendanceData, attendanceThreshold]);
 
   // Emit a custom event to update the student filter with performance data
   useEffect(() => {
@@ -1005,37 +1134,54 @@ function DashboardContent() {
         detail: {
           student: selectedStudent,
           isAtRisk: percentage < individualGoal,
-          atRiskReason: percentage < individualGoal ? "Onder individuele doelstelling" : null,
+          atRiskReason:
+            percentage < individualGoal
+              ? "Onder individuele doelstelling"
+              : null,
           performance: percentage, // Add the actual performance percentage
           attendancePercentage: attendanceData?.present || 0,
-          isBelowAttendanceThreshold: attendanceData?.present < attendanceThreshold,
+          isBelowAttendanceThreshold:
+            attendanceData?.present < attendanceThreshold,
         },
-      })
-      window.dispatchEvent(event)
+      });
+      window.dispatchEvent(event);
 
       // Also update the student profile with the current performance
       try {
-        const studentProfilesJSON = localStorage.getItem("studentProfiles")
-        let studentProfiles: { [key: string]: any } = {}
+        const studentProfilesJSON = localStorage.getItem("studentProfiles");
+        let studentProfiles: { [key: string]: any } = {};
         if (studentProfilesJSON) {
-          studentProfiles = JSON.parse(studentProfilesJSON)
+          studentProfiles = JSON.parse(studentProfilesJSON);
         }
 
         // Update or create this student's profile with performance data
         studentProfiles[selectedStudent] = {
           ...(studentProfiles[selectedStudent] || {}),
           performance: percentage,
-        }
+        };
 
         // Save back to localStorage
-        localStorage.setItem("studentProfiles", JSON.stringify(studentProfiles))
+        localStorage.setItem(
+          "studentProfiles",
+          JSON.stringify(studentProfiles)
+        );
 
-        console.log(`Updated performance data (${percentage.toFixed(1)}%) for student: ${selectedStudent}`)
+        console.log(
+          `Updated performance data (${percentage.toFixed(
+            1
+          )}%) for student: ${selectedStudent}`
+        );
       } catch (error) {
-        console.error("Error updating student performance in profile:", error)
+        console.error("Error updating student performance in profile:", error);
       }
     }
-  }, [selectedStudent, percentage, individualGoal, attendanceData, attendanceThreshold])
+  }, [
+    selectedStudent,
+    percentage,
+    individualGoal,
+    attendanceData,
+    attendanceThreshold,
+  ]);
 
   return (
     <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col">
@@ -1078,55 +1224,65 @@ function DashboardContent() {
                       <div className="flex items-start">
                         {/* Profile image with status indicator */}
                         <div className="relative mr-4">
-                            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700 shadow-sm">
-                              <Image
+                          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700 shadow-sm">
+                            <Image
                               src={profileImage || "/images/default.png"}
                               alt={selectedStudent}
                               width={80}
                               height={80}
                               className="object-cover"
                               onError={(e) => {
-                                const img = e.target as HTMLImageElement
+                                const img = e.target as HTMLImageElement;
                                 // @ts-ignore
-                                (img as any)._errorCount = ((img as any)._errorCount || 0) + 1
+                                (img as any)._errorCount =
+                                  ((img as any)._errorCount || 0) + 1;
                                 if (
-                                (img as any)._errorCount <= 3 &&
-                                img.src !== window.location.origin + "/images/default.png"
+                                  (img as any)._errorCount <= 3 &&
+                                  img.src !==
+                                    window.location.origin +
+                                      "/images/default.png"
                                 ) {
-                                img.src = "/images/default.png"
+                                  img.src = "/images/default.png";
                                 }
                               }}
-                              />
-                            </div>
+                            />
+                          </div>
                           <div className="absolute -bottom-1 -right-1 flex space-x-1">
                             {percentage < individualGoal && (
                               <div className="bg-amber-100 dark:bg-amber-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
                                 <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                                 <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
                                   {language === "en"
-                                    ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
-                                    : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`}
+                                    ? `Competency achievement (${percentage.toFixed(
+                                        1
+                                      )}%) is below individual goal (${individualGoal}%)`
+                                    : `Competentiebehaald (${percentage.toFixed(
+                                        1
+                                      )}%) is onder individuele doelstelling (${individualGoal}%)`}
                                 </div>
                               </div>
                             )}
                             {/* Attendance risk icon - also shown in student filter when attendance is below threshold */}
-                            {attendanceData && attendanceData.present < attendanceThreshold && (
-                              <div className="bg-blue-100 dark:bg-blue-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
-                                <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                                  {language === "en"
-                                    ? `Attendance (${attendanceData.present}%) is below threshold (${attendanceThreshold}%)`
-                                    : `Aanwezigheid (${attendanceData.present}%) is onder de grenswaarde (${attendanceThreshold}%)`}
+                            {attendanceData &&
+                              attendanceData.present < attendanceThreshold && (
+                                <div className="bg-blue-100 dark:bg-blue-900/60 p-1 rounded-full border-2 border-white dark:border-gray-800 group">
+                                  <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-black/90 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                                    {language === "en"
+                                      ? `Attendance (${attendanceData.present}%) is below threshold (${attendanceThreshold}%)`
+                                      : `Aanwezigheid (${attendanceData.present}%) is onder de grenswaarde (${attendanceThreshold}%)`}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
                           </div>
                         </div>
 
                         {/* Student information */}
                         <div className="flex-1">
                           <div className="flex flex-col">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{selectedStudent}</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                              {selectedStudent}
+                            </h3>
                             <div className="flex items-center mt-1">
                               <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-md">
                                 {selectedClass}
@@ -1141,7 +1297,8 @@ function DashboardContent() {
                               </div>
                               <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
                                 <span>
-                                  {t.grade} {enrollmentInfo.grade} | {enrollmentInfo.currentGrade}e {t.year}
+                                  {t.grade} {enrollmentInfo.grade} |{" "}
+                                  {enrollmentInfo.currentGrade}e {t.year}
                                 </span>
                               </div>
                             </div>
@@ -1149,18 +1306,25 @@ function DashboardContent() {
                             {/* Enrollment info */}
                             <div className="mt-2 flex items-center gap-4 text-xs">
                               <div className="flex items-center">
-                                <span className="text-gray-500 dark:text-gray-400">{t.enrolledSince}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {t.enrolledSince}
+                                </span>
                                 <span className="ml-1 font-medium text-gray-700 dark:text-gray-300">
                                   {enrollmentInfo.years[0]}
                                 </span>
                               </div>
                               <div className="flex items-center">
-                                <span className="text-gray-500 dark:text-gray-400">{t.numberOfYears}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {t.numberOfYears}
+                                </span>
                                 <span
                                   className="ml-1 font-medium text-gray-700 dark:text-gray-300 group relative cursor-help"
                                   title={t.enrollmentHistory}
                                 >
-                                  {enrollmentInfo.years.length} {enrollmentInfo.years.length === 1 ? t.year : t.years}
+                                  {enrollmentInfo.years.length}{" "}
+                                  {enrollmentInfo.years.length === 1
+                                    ? t.year
+                                    : t.years}
                                   <span className="invisible group-hover:visible absolute left-0 top-full mt-1 bg-black/90 text-white text-xs p-2 rounded-md z-50 whitespace-nowrap shadow-lg">
                                     {enrollmentInfo.years.join(", ")}
                                   </span>
@@ -1200,11 +1364,15 @@ function DashboardContent() {
                                 defaultValue={attendanceThreshold}
                                 className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-600 focus:border-transparent"
                               />
-                              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
+                              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                                %
+                              </span>
                             </div>
                             <button
                               className={`px-2 py-1 text-xs ${
-                                isSaving ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600 text-white"
+                                isSaving
+                                  ? "bg-gray-400"
+                                  : "bg-blue-500 hover:bg-blue-600 text-white"
                               } rounded-md flex items-center gap-1 shadow-sm transition-all duration-200`}
                               disabled={isSaving}
                               onClick={handleSaveAttendanceThreshold}
@@ -1248,12 +1416,14 @@ function DashboardContent() {
                             </span>
                             <span
                               className={`font-medium ${
-                                attendanceData && attendanceData.present < attendanceThreshold
+                                attendanceData &&
+                                attendanceData.present < attendanceThreshold
                                   ? "text-red-500 dark:text-red-400"
                                   : "text-green-500 dark:text-green-400"
                               }`}
                             >
-                              {attendanceData && typeof attendanceData.present === "number"
+                              {attendanceData &&
+                              typeof attendanceData.present === "number"
                                 ? attendanceData.present
                                 : 0}
                               %
@@ -1261,19 +1431,23 @@ function DashboardContent() {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 dark:text-gray-400">
-                              {language === "en" ? "Individual:" : "Individueel:"}
+                              {language === "en"
+                                ? "Individual:"
+                                : "Individueel:"}
                             </span>
                             <User className="h-3 w-3 text-blue-500 dark:text-blue-400 mr-0.5" />
-                            {/* <span className="font-medium text-blue-500 dark:text-blue-400">{attendanceThreshold}%</span> */}
-                            <span className="font-medium text-blue-500 dark:text-blue-400">{globalAttendanceThreshold}%</span>
+                            <span className="font-medium text-blue-500 dark:text-blue-400">
+                              {attendanceThreshold}%
+                            </span>
+                            {/* <span className="font-medium text-blue-500 dark:text-blue-400">{globalAttendanceThreshold}%</span> */}
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 dark:text-gray-400">
                               {language === "en" ? "Class goal:" : "Klasdoel:"}
                             </span>
                             <span className="font-medium text-blue-500 dark:text-blue-400">
-                              {/* {globalAttendanceThreshold}% */}
-                              {attendanceThreshold}%
+                              {globalAttendanceThreshold}%
+                              {/* {attendanceThreshold}% */}
                             </span>
                           </div>
                         </div>
@@ -1283,12 +1457,18 @@ function DashboardContent() {
                           {/* Current attendance with gradient */}
                           <div
                             className={`h-full ${
-                              attendanceData && attendanceData.present < attendanceThreshold
+                              attendanceData &&
+                              attendanceData.present < attendanceThreshold
                                 ? "bg-gradient-to-r from-red-400 to-red-500 dark:from-red-600 dark:to-red-500"
                                 : "bg-gradient-to-r from-green-400 to-green-500 dark:from-green-600 dark:to-green-500"
                             }`}
                             style={{
-                              width: `${attendanceData && typeof attendanceData.present === "number" ? attendanceData.present : 0}%`,
+                              width: `${
+                                attendanceData &&
+                                typeof attendanceData.present === "number"
+                                  ? attendanceData.present
+                                  : 0
+                              }%`,
                             }}
                           ></div>
 
@@ -1299,7 +1479,8 @@ function DashboardContent() {
                           >
                             <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></div>
                           </div>
-                          {globalAttendanceThreshold !== attendanceThreshold && (
+                          {globalAttendanceThreshold !==
+                            attendanceThreshold && (
                             <div
                               className="absolute top-0 bottom-0 w-0.5 bg-blue-300 dark:bg-blue-600 z-10 dashed-line"
                               style={{ left: `${globalAttendanceThreshold}%` }}
@@ -1335,12 +1516,16 @@ function DashboardContent() {
                                 defaultValue={individualGoal}
                                 className="w-16 h-7 px-2 text-xs border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-amber-300 dark:focus:ring-amber-600 focus:border-transparent"
                               />
-                              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">%</span>
+                              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                                %
+                              </span>
                             </div>
                             <div className="relative group">
                               <button
                                 className={`px-2 py-1 text-xs ${
-                                  isSavingGoal ? "bg-gray-400" : "bg-amber-500 hover:bg-amber-600 text-white"
+                                  isSavingGoal
+                                    ? "bg-gray-400"
+                                    : "bg-amber-500 hover:bg-amber-600 text-white"
                                 } rounded-md flex items-center gap-1 shadow-sm transition-all duration-200`}
                                 disabled={isSavingGoal}
                                 onClick={handleSaveIndividualGoal}
@@ -1400,19 +1585,22 @@ function DashboardContent() {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 dark:text-gray-400">
-                              {language === "en" ? "Individual:" : "Individueel:"}
+                              {language === "en"
+                                ? "Individual:"
+                                : "Individueel:"}
                             </span>
                             <User className="h-3 w-3 text-amber-500 dark:text-amber-400 mr-0.5" />
-                            {/* <span className="font-medium text-amber-500 dark:text-amber-400">{individualGoal}%</span> */}
-                            <span className="font-medium text-amber-500 dark:text-amber-400">{globalIndividualGoal}%</span>
+                            <span className="font-medium text-amber-500 dark:text-amber-400">
+                              {individualGoal}%
+                            </span>
+                            {/* <span className="font-medium text-amber-500 dark:text-amber-400">{globalIndividualGoal}%</span> */}
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-500 dark:text-gray-400">
                               {language === "en" ? "Class goal:" : "Klasdoel:"}
                             </span>
                             <span className="font-medium text-amber-500 dark:text-amber-400">
-                              {/* {globalIndividualGoal}% */}
-                              {individualGoal}%
+                              {globalIndividualGoal}%{/* {individualGoal}% */}
                             </span>
                           </div>
                         </div>
@@ -1452,20 +1640,26 @@ function DashboardContent() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Attendance section */}
                       <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">{t.attendance}</h3>
+                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">
+                          {t.attendance}
+                        </h3>
                         <div className="space-y-2">
                           <div>
                             <div className="flex justify-between text-xs mb-1">
-                              <span className="dark:text-gray-300">{t.attendance}</span>
                               <span className="dark:text-gray-300">
-                                {attendanceData && typeof attendanceData.present === "number"
+                                {t.attendance}
+                              </span>
+                              <span className="dark:text-gray-300">
+                                {attendanceData &&
+                                typeof attendanceData.present === "number"
                                   ? `${attendanceData.present}%`
                                   : "Geen data"}
                               </span>
                             </div>
                             <Progress
                               value={
-                                attendanceData && typeof attendanceData.present === "number"
+                                attendanceData &&
+                                typeof attendanceData.present === "number"
                                   ? attendanceData.present
                                   : 0
                               }
@@ -1486,16 +1680,30 @@ function DashboardContent() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1 text-xs">
                                   <CheckCircle2
-                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-green-500" : "text-gray-400"}`}
+                                    className={`h-3 w-3 ${
+                                      hasAttendanceDetailData()
+                                        ? "text-green-500"
+                                        : "text-gray-400"
+                                    }`}
                                   />
-                                  <span className="dark:text-gray-300 font-medium">{t.authorized}:</span>
+                                  <span className="dark:text-gray-300 font-medium">
+                                    {t.authorized}:
+                                  </span>
                                 </div>
                                 {hasAttendanceDetailData() && (
                                   <div className="text-xs dark:text-gray-300">
-                                    <span className="font-medium">{attendanceData.authorized}%</span>
+                                    <span className="font-medium">
+                                      {attendanceData.authorized}%
+                                    </span>
                                     <span className="text-gray-500 dark:text-gray-400 ml-1">
-                                      (~{Math.round(attendanceData.authorized * 0.36)}{" "}
-                                      {attendanceData.authorized * 0.36 > 1 ? "dagen" : "dag"})
+                                      (~
+                                      {Math.round(
+                                        attendanceData.authorized * 0.36
+                                      )}{" "}
+                                      {attendanceData.authorized * 0.36 > 1
+                                        ? "dagen"
+                                        : "dag"}
+                                      )
                                     </span>
                                   </div>
                                 )}
@@ -1507,7 +1715,9 @@ function DashboardContent() {
                                 ></div>
                               </div>
                               {!hasAttendanceDetailData() && (
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                  Geen data beschikbaar
+                                </p>
                               )}
                             </div>
 
@@ -1516,16 +1726,34 @@ function DashboardContent() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1 text-xs">
                                   <XCircle
-                                    className={`h-3 w-3 ${hasAttendanceDetailData() ? "text-red-500" : "text-gray-400"}`}
+                                    className={`h-3 w-3 ${
+                                      hasAttendanceDetailData()
+                                        ? "text-red-500"
+                                        : "text-gray-400"
+                                    }`}
                                   />
-                                  <span className="dark:text-gray-300 font-medium">{t.unauthorized}:</span>
+                                  <span className="dark:text-gray-300 font-medium">
+                                    {t.unauthorized}:
+                                  </span>
                                 </div>
                                 {hasAttendanceDetailData() && (
                                   <div className="text-xs dark:text-gray-300">
-                                    <span className="font-medium">{typeof attendanceData.unauthorized === "number" ? attendanceData.unauthorized : 0}%</span>
+                                    <span className="font-medium">
+                                      {typeof attendanceData.unauthorized ===
+                                      "number"
+                                        ? attendanceData.unauthorized
+                                        : 0}
+                                      %
+                                    </span>
                                     <span className="text-gray-500 dark:text-gray-400 ml-1">
-                                      (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
-                                      {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
+                                      (~
+                                      {Math.round(
+                                        attendanceData.unauthorized * 0.36
+                                      )}{" "}
+                                      {attendanceData.unauthorized * 0.36 > 1
+                                        ? "dagen"
+                                        : "dag"}
+                                      )
                                     </span>
                                   </div>
                                 )}
@@ -1537,12 +1765,16 @@ function DashboardContent() {
                                 ></div>
                               </div>
                               {!hasAttendanceDetailData() && (
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                  Geen data beschikbaar
+                                </p>
                               )}
                             </div>
 
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {attendanceData && typeof attendanceData.unauthorized === "number" ? (
+                              {attendanceData &&
+                              typeof attendanceData.unauthorized ===
+                                "number" ? (
                                 attendanceData.unauthorized > 10 ? (
                                   "Te veel ongewettigde afwezigheden"
                                 ) : attendanceData.unauthorized > 5 ? (
@@ -1552,7 +1784,8 @@ function DashboardContent() {
                                 )
                               ) : (
                                 <span className="text-gray-400 dark:text-gray-500">
-                                  Geen gegevens over ongewettigde afwezigheden beschikbaar
+                                  Geen gegevens over ongewettigde afwezigheden
+                                  beschikbaar
                                 </span>
                               )}
                             </div>
@@ -1562,15 +1795,24 @@ function DashboardContent() {
 
                       {/* Main subjects section */}
                       <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">{t.mainSubjects}</h3>
+                        <h3 className="text-sm font-medium mb-2 dark:text-gray-200">
+                          {t.mainSubjects}
+                        </h3>
                         <div className="space-y-4">
                           {mainSubjects.map((subject) => (
                             <div key={subject.subject} className="space-y-1">
                               <div className="flex justify-between items-center text-xs mb-1">
-                                <span className="dark:text-gray-300">{subject.subject}</span>
+                                <span className="dark:text-gray-300">
+                                  {subject.subject}
+                                </span>
                                 <div className="flex items-center gap-1">
-                                  {getStatusIndicator(subject.status, subject.score)}
-                                  <span className="text-gray-500 dark:text-gray-400">({subject.competencies})</span>
+                                  {getStatusIndicator(
+                                    subject.status,
+                                    subject.score
+                                  )}
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    ({subject.competencies})
+                                  </span>
                                 </div>
                               </div>
                               <Progress value={subject.score} className="h-2" />
@@ -1617,7 +1859,9 @@ function DashboardContent() {
 
                   <div className="max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
                     <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md border border-gray-200 dark:border-gray-600">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">{t.noNotes}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                        {t.noNotes}
+                      </p>
                     </div>
 
                     {/* Positive section - show when attendance is above threshold */}
@@ -1629,7 +1873,9 @@ function DashboardContent() {
                             {t.withinTarget}
                           </h3>
                           <button
-                            onClick={() => setExpandedAttendance(!expandedAttendance)}
+                            onClick={() =>
+                              setExpandedAttendance(!expandedAttendance)
+                            }
                             className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center"
                           >
                             {expandedAttendance ? t.showLess : t.showMore}
@@ -1642,30 +1888,51 @@ function DashboardContent() {
                         </div>
                         <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md border border-green-200 dark:border-green-800">
                           <p className="text-sm text-green-800 dark:text-green-400 font-medium">
-                            {t.attendance} ({attendanceData.present}%) {t.meetsThreshold} ({attendanceThreshold}%)
+                            {t.attendance} ({attendanceData.present}%){" "}
+                            {t.meetsThreshold} ({attendanceThreshold}%)
                           </p>
 
                           {/* Expandable content */}
                           <div
-                            className={`overflow-hidden transition-all duration-300 ${expandedAttendance ? "max-h-40 overflow-y-auto mt-2" : "max-h-0"}`}
+                            className={`overflow-hidden transition-all duration-300 ${
+                              expandedAttendance
+                                ? "max-h-40 overflow-y-auto mt-2"
+                                : "max-h-0"
+                            }`}
                           >
-                            <p className="text-xs text-green-700 dark:text-green-400">{t.goodAttendance}.</p>
+                            <p className="text-xs text-green-700 dark:text-green-400">
+                              {t.goodAttendance}.
+                            </p>
                             {/* Vervang ook de vergelijkbare sectie in de notitie-popup (rond regel 1000) door: */}
                             <div className="flex flex-col gap-2 mt-2">
                               <div>
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
                                     <CheckCircle2
-                                      className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
+                                      className={`h-3 w-3 ${
+                                        hasAttendanceDetailData()
+                                          ? ""
+                                          : "text-gray-400 dark:text-gray-500"
+                                      }`}
                                     />
-                                    <span className="font-medium">{t.authorized}:</span>
+                                    <span className="font-medium">
+                                      {t.authorized}:
+                                    </span>
                                   </div>
                                   {hasAttendanceDetailData() && (
                                     <div className="text-xs text-green-700 dark:text-green-400">
-                                      <span className="font-medium">{attendanceData.authorized}%</span>
+                                      <span className="font-medium">
+                                        {attendanceData.authorized}%
+                                      </span>
                                       <span className="opacity-75 ml-1">
-                                        (~{Math.round(attendanceData.authorized * 0.36)}{" "}
-                                        {attendanceData.authorized * 0.36 > 1 ? "dagen" : "dag"})
+                                        (~
+                                        {Math.round(
+                                          attendanceData.authorized * 0.36
+                                        )}{" "}
+                                        {attendanceData.authorized * 0.36 > 1
+                                          ? "dagen"
+                                          : "dag"}
+                                        )
                                       </span>
                                     </div>
                                   )}
@@ -1679,7 +1946,9 @@ function DashboardContent() {
                                   ></div>
                                 </div>
                                 {!hasAttendanceDetailData() && (
-                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    Geen data beschikbaar
+                                  </p>
                                 )}
                               </div>
 
@@ -1687,16 +1956,30 @@ function DashboardContent() {
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
                                     <XCircle
-                                      className={`h-3 w-3 ${hasAttendanceDetailData() ? "" : "text-gray-400 dark:text-gray-500"}`}
+                                      className={`h-3 w-3 ${
+                                        hasAttendanceDetailData()
+                                          ? ""
+                                          : "text-gray-400 dark:text-gray-500"
+                                      }`}
                                     />
-                                    <span className="font-medium">{t.unauthorized}:</span>
+                                    <span className="font-medium">
+                                      {t.unauthorized}:
+                                    </span>
                                   </div>
                                   {hasAttendanceDetailData() && (
                                     <div className="text-xs text-green-700 dark:text-green-400">
-                                      <span className="font-medium">{attendanceData.unauthorized}%</span>
+                                      <span className="font-medium">
+                                        {attendanceData.unauthorized}%
+                                      </span>
                                       <span className="opacity-75 ml-1">
-                                        (~{Math.round(attendanceData.unauthorized * 0.36)}{" "}
-                                        {attendanceData.unauthorized * 0.36 > 1 ? "dagen" : "dag"})
+                                        (~
+                                        {Math.round(
+                                          attendanceData.unauthorized * 0.36
+                                        )}{" "}
+                                        {attendanceData.unauthorized * 0.36 > 1
+                                          ? "dagen"
+                                          : "dag"}
+                                        )
                                       </span>
                                     </div>
                                   )}
@@ -1710,7 +1993,9 @@ function DashboardContent() {
                                   ></div>
                                 </div>
                                 {!hasAttendanceDetailData() && (
-                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Geen data beschikbaar</p>
+                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    Geen data beschikbaar
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -1720,7 +2005,8 @@ function DashboardContent() {
                     )}
 
                     {/* At Risk section - show when student is at risk OR attendance is below threshold */}
-                    {(percentage < individualGoal || attendanceData.present < attendanceThreshold) && (
+                    {(percentage < individualGoal ||
+                      attendanceData.present < attendanceThreshold) && (
                       <div className="mt-4">
                         <div className="flex items-center justify-between">
                           <h3 className="text-md font-medium text-amber-600 dark:text-amber-500 flex items-center gap-2">
@@ -1728,7 +2014,11 @@ function DashboardContent() {
                             {t.attentionPoints}
                           </h3>
                           <button
-                            onClick={() => setExpandedAttentionPoints(!expandedAttentionPoints)}
+                            onClick={() =>
+                              setExpandedAttentionPoints(
+                                !expandedAttentionPoints
+                              )
+                            }
                             className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center"
                           >
                             {expandedAttentionPoints ? t.showLess : t.showMore}
@@ -1744,15 +2034,21 @@ function DashboardContent() {
                           {percentage < individualGoal && (
                             <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
                               {language === "en"
-                                ? `Competency achievement (${percentage.toFixed(1)}%) is below individual goal (${individualGoal}%)`
-                                : `Competentiebehaald (${percentage.toFixed(1)}%) is onder individuele doelstelling (${individualGoal}%)`}
+                                ? `Competency achievement (${percentage.toFixed(
+                                    1
+                                  )}%) is below individual goal (${individualGoal}%)`
+                                : `Competentiebehaald (${percentage.toFixed(
+                                    1
+                                  )}%) is onder individuele doelstelling (${individualGoal}%)`}
                             </p>
                           )}
 
                           {/* Attendance warning - always show if below threshold */}
                           {attendanceData.present < attendanceThreshold && (
                             <div
-                              className={`${percentage < individualGoal ? "mt-3" : ""} bg-amber-50/50 dark:bg-amber-900/10 rounded-md p-2 border border-amber-200 dark:border-amber-800/30`}
+                              className={`${
+                                percentage < individualGoal ? "mt-3" : ""
+                              } bg-amber-50/50 dark:bg-amber-900/10 rounded-md p-2 border border-amber-200 dark:border-amber-800/30`}
                             >
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
@@ -1774,37 +2070,46 @@ function DashboardContent() {
 
                           {/* Expandable content */}
                           <div
-                            className={`overflow-hidden transition-all duration-300 ${expandedAttentionPoints ? "max-h-60 overflow-y-auto mt-3" : "max-h-0"}`}
+                            className={`overflow-hidden transition-all duration-300 ${
+                              expandedAttentionPoints
+                                ? "max-h-60 overflow-y-auto mt-3"
+                                : "max-h-0"
+                            }`}
                           >
                             {attendanceData.present < attendanceThreshold && (
                               <>
                                 <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">
-                                  {attendanceData.present >= attendanceThreshold - 10
+                                  {attendanceData.present >=
+                                  attendanceThreshold - 10
                                     ? t.studentMustAttend
                                     : t.criticalAttendance}
                                 </p>
                                 <p className="text-xs text-amber-700 dark:text-amber-400 mb-2">
-                                  {t.unauthorized}: {attendanceData.unauthorized}%
+                                  {t.unauthorized}:{" "}
+                                  {attendanceData.unauthorized}%
                                 </p>
                               </>
                             )}
 
-                            {competencyIssues.length > 0 && percentage < individualGoal && (
-                              <div className="mt-2">
-                                <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-1">
-                                  {t.competencyIssues}:
-                                </p>
-                                <ul className="list-disc pl-5 text-xs text-amber-600 dark:text-amber-500 space-y-1">
-                                  {competencyIssues.map((issue, index) => (
-                                    <li key={index}>{issue}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            {competencyIssues.length > 0 &&
+                              percentage < individualGoal && (
+                                <div className="mt-2">
+                                  <p className="text-sm text-amber-700 dark:text-amber-400 font-medium mb-1">
+                                    {t.competencyIssues}:
+                                  </p>
+                                  <ul className="list-disc pl-5 text-xs text-amber-600 dark:text-amber-500 space-y-1">
+                                    {competencyIssues.map((issue, index) => (
+                                      <li key={index}>{issue}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
 
                             <div className="mt-3 bg-gray-100 dark:bg-gray-800/50 p-2 rounded-md">
                               <p className="text-xs font-medium mb-1">
-                                {language === "en" ? "Risk Rules:" : "Risicoregels:"}
+                                {language === "en"
+                                  ? "Risk Rules:"
+                                  : "Risicoregels:"}
                               </p>
                               <ul className="list-disc pl-4 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                                 <li>
@@ -1820,7 +2125,9 @@ function DashboardContent() {
                               </ul>
                             </div>
 
-                            <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">{t.needsGuidance}</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
+                              {t.needsGuidance}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1847,35 +2154,49 @@ function DashboardContent() {
                       </div>
                       <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-200 dark:border-blue-800">
                         <p className="text-sm text-blue-800 dark:text-blue-400 font-medium">
-                          {percentage >= individualGoal && attendanceData.present >= attendanceThreshold
+                          {percentage >= individualGoal &&
+                          attendanceData.present >= attendanceThreshold
                             ? t.passed
                             : t.evaluationNeeded}
                         </p>
 
                         {/* Expandable content */}
                         <div
-                          className={`overflow-hidden transition-all duration-300 ${expandedStatus ? "max-h-60 overflow-y-auto mt-2" : "max-h-0"}`}
+                          className={`overflow-hidden transition-all duration-300 ${
+                            expandedStatus
+                              ? "max-h-60 overflow-y-auto mt-2"
+                              : "max-h-0"
+                          }`}
                         >
                           <h4 className="text-xs font-medium mb-1 text-blue-700 dark:text-blue-400">
                             {t.statusCalculation}:
                           </h4>
                           <ul className="list-disc pl-4 space-y-1 text-xs text-blue-700 dark:text-blue-400">
                             <li>
-                              {t.competencies}: {percentage.toFixed(2)}% {percentage >= individualGoal ? "✓" : "✗"} (
+                              {t.competencies}: {percentage.toFixed(2)}%{" "}
+                              {percentage >= individualGoal ? "✓" : "✗"} (
                               {t.goal}: {individualGoal}%)
                             </li>
                             <li>
                               {t.attendance}: {attendanceData.present}%{" "}
-                              {attendanceData.present >= attendanceThreshold ? "✓" : "✗"} ({t.goal}:{" "}
-                              {attendanceThreshold}
+                              {attendanceData.present >= attendanceThreshold
+                                ? "✓"
+                                : "✗"}{" "}
+                              ({t.goal}: {attendanceThreshold}
                               %)
                             </li>
                           </ul>
-                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.passedStatus}</p>
-                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">{t.individualGoalExplanation}</p>
+                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">
+                            {t.passedStatus}
+                          </p>
+                          <p className="mt-2 text-xs text-blue-700 dark:text-blue-400">
+                            {t.individualGoalExplanation}
+                          </p>
                           <div className="mt-3 bg-gray-100 dark:bg-gray-800/50 p-2 rounded-md">
                             <p className="text-xs font-medium mb-1">
-                              {language === "en" ? "Risk Rules:" : "Risicoregels:"}
+                              {language === "en"
+                                ? "Risk Rules:"
+                                : "Risicoregels:"}
                             </p>
                             <ul className="list-disc pl-4 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                               <li>
@@ -1906,36 +2227,61 @@ function DashboardContent() {
         </div>
       </header>
 
-      <main className={`w-full px-4 py-2 flex-1 overflow-auto ${compactView ? "max-w-screen-2xl mx-auto" : ""}`}>
+      <main
+        className={`w-full px-4 py-2 flex-1 overflow-auto ${
+          compactView ? "max-w-screen-2xl mx-auto" : ""
+        }`}
+      >
         {selectedStudent ? (
           <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
             {t.positioningFrom} {selectedClass}
           </h1>
         ) : (
-          <h1 className="text-xl font-medium text-center mb-4 dark:text-white">{t.positioning}</h1>
+          <h1 className="text-xl font-medium text-center mb-4 dark:text-white">
+            {t.positioning}
+          </h1>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="md:col-span-1">
-            <ProgressHeader attendanceThreshold={attendanceThreshold} individualGoal={individualGoal} />
+            <ProgressHeader
+              attendanceThreshold={attendanceThreshold}
+              individualGoal={individualGoal}
+            />
           </div>
           <div className="md:col-span-3">
             <div
-              className={`grid grid-cols-1 ${compactView ? "md:grid-cols-1 lg:grid-cols-3" : "md:grid-cols-3"} gap-4`}
+              className={`grid grid-cols-1 ${
+                compactView ? "md:grid-cols-1 lg:grid-cols-3" : "md:grid-cols-3"
+              } gap-4`}
               style={{ height: "300px", minHeight: "300px" }}
             >
-              <SemesterScatterPlot title="Semester 1" data={semesterScores[0]} />
-              <SemesterScatterPlot title="Semester 2" data={semesterScores[1]} />
-              <SemesterScatterPlot title="Semester 3" data={semesterScores[2]} />
+              <SemesterScatterPlot
+                title="Semester 1"
+                data={semesterScores[0]}
+              />
+              <SemesterScatterPlot
+                title="Semester 2"
+                data={semesterScores[1]}
+              />
+              <SemesterScatterPlot
+                title="Semester 3"
+                data={semesterScores[2]}
+              />
             </div>
             <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {t.eachDot} {selectedStudent && `${t.coloredDot} ${selectedStudent}.`}
+              {t.eachDot}{" "}
+              {selectedStudent && `${t.coloredDot} ${selectedStudent}.`}
             </div>
           </div>
         </div>
 
         <div className="overflow-hidden">
-          <Tabs defaultValue="semester1" className="w-full" onValueChange={setActiveSemester}>
+          <Tabs
+            defaultValue="semester1"
+            className="w-full"
+            onValueChange={setActiveSemester}
+          >
             <div className="flex justify-end mb-2">
               <div className="flex items-center gap-2">
                 {/* Selector voor sorteerveld */}
@@ -1947,13 +2293,16 @@ function DashboardContent() {
                         {sortOption.field === "score"
                           ? t.score
                           : sortOption.field === "activities"
-                            ? t.activities
-                            : t.hoursPerWeek}
+                          ? t.activities
+                          : t.hoursPerWeek}
                       </span>
                       <ChevronDown className="h-3 w-3 ml-1 opacity-70" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 animate-in fade-in zoom-in-95 duration-200">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 animate-in fade-in zoom-in-95 duration-200"
+                  >
                     <DropdownMenuLabel>{t.sortBy}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -1964,7 +2313,9 @@ function DashboardContent() {
                         <BarChart3 className="h-3.5 w-3.5" />
                         <span>{t.score}</span>
                       </div>
-                      {sortOption.field === "score" && <div className="h-2 w-2 rounded-full bg-blue-500"></div>}
+                      {sortOption.field === "score" && (
+                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="flex justify-between items-center"
@@ -1974,7 +2325,9 @@ function DashboardContent() {
                         <Activity className="h-3.5 w-3.5" />
                         <span>{t.activities}</span>
                       </div>
-                      {sortOption.field === "activities" && <div className="h-2 w-2 rounded-full bg-blue-500"></div>}
+                      {sortOption.field === "activities" && (
+                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="flex justify-between items-center"
@@ -1984,7 +2337,9 @@ function DashboardContent() {
                         <Clock className="h-3.5 w-3.5" />
                         <span>{t.hoursPerWeek}</span>
                       </div>
-                      {sortOption.field === "hours" && <div className="h-2 w-2 rounded-full bg-blue-500"></div>}
+                      {sortOption.field === "hours" && (
+                        <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                      )}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1995,10 +2350,12 @@ function DashboardContent() {
                     setSortOption((prev) => ({
                       ...prev,
                       direction: prev.direction === "asc" ? "desc" : "asc",
-                    }))
+                    }));
                   }}
                   className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  title={sortOption.direction === "asc" ? t.ascending : t.descending}
+                  title={
+                    sortOption.direction === "asc" ? t.ascending : t.descending
+                  }
                 >
                   {sortOption.direction === "asc" ? (
                     <ArrowUp className="h-3.5 w-3.5" />
@@ -2014,7 +2371,7 @@ function DashboardContent() {
                 className="text-base text-gray-600 dark:text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md data-[state=active]:border-b-2 data-[state=active]:border-blue-500 dark:data-[state=active]:border-blue-400 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 onClick={() => {
                   // Extract semester number from the tab value and store it
-                  const semesterNum = 1
+                  const semesterNum = 1;
                   // You can use this semesterNum value to pass to components that need it
                 }}
               >
@@ -2026,7 +2383,7 @@ function DashboardContent() {
                 className="text-base text-gray-600 dark:text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md data-[state=active]:border-b-2 data-[state=active]:border-blue-500 dark:data-[state=active]:border-blue-400 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 onClick={() => {
                   // Extract semester number from the tab value and store it
-                  const semesterNum = 2
+                  const semesterNum = 2;
                   // You can use this semesterNum value to pass to components that need it
                 }}
               >
@@ -2038,7 +2395,7 @@ function DashboardContent() {
                 className="text-base text-gray-600 dark:text-gray-400 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-md data-[state=active]:border-b-2 data-[state=active]:border-blue-500 dark:data-[state=active]:border-blue-400 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                 onClick={() => {
                   // Extract semester number from the tab value and store it
-                  const semesterNum = 3
+                  const semesterNum = 3;
                   // You can use this semesterNum value to pass to components that need it
                 }}
               >
@@ -2069,7 +2426,9 @@ function DashboardContent() {
                       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                         {t.noStudentSelected}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">{t.selectStudent}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
+                        {t.selectStudent}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -2079,5 +2438,5 @@ function DashboardContent() {
         </div>
       </main>
     </div>
-  )
+  );
 }
