@@ -7,9 +7,23 @@ interface ProfileImageProps {
 }
 
 export function ProfileImage({ src, alt, className = "" }: ProfileImageProps) {
+  const imageSrc = src && src.trim() !== "" ? src : "/images/default.png";
+
   return (
     <div className={`relative overflow-hidden rounded-full ${className}`}>
-      <Image src={src || "/images/default.png"} alt={alt} width={80} height={80} className="object-cover" />
+      <Image
+        src={imageSrc}
+        alt={alt}
+        width={80}
+        height={80}
+        className="object-cover"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          if (target.src !== window.location.origin + "/images/default.png") {
+            target.src = "/images/default.png";
+          }
+        }}
+      />
     </div>
-  )
+  );
 }
