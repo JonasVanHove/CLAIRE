@@ -91,17 +91,15 @@ function DashboardContent() {
 
   // Add a state for the threshold value - default to 85%
   const [attendanceThreshold, setAttendanceThreshold] = useState(85);
-
-  const individualGoalData = useMemo(() => {
-    const data = getStudentIndividualGoal(selectedStudent) as number | undefined;
-    return data ?? 60; // Default to 60 if no value is found
-  }, [selectedStudent]);
-    console.log(`----------------individualGoalData ${selectedStudent}:`, individualGoalData);
-
-  const [individualGoal, setIndividualGoal] = useState(individualGoalData);
-  const [isLoadingThresholds, setIsLoadingThresholds] = useState(false);
   // Add a state for the individual goal - default to the value from the data
-  // const [individualGoal, setIndividualGoal] = useState(() => getStudentIndividualGoal(selectedStudent))
+  const [individualGoal, setIndividualGoal] = useState(() => getStudentIndividualGoal(selectedStudent))
+  // const [individualGoal, setIndividualGoal] = useState(60);
+  // const individualGoalData = useMemo(() => {
+  //   const data = getStudentIndividualGoal(selectedStudent) as number | undefined;
+  //   return data ?? 60; // Default to 60 if no value is found
+  // }, [selectedStudent]);
+    // console.log(`-individualGoalData ${selectedStudent}:`, individualGoalData);
+  const [isLoadingThresholds, setIsLoadingThresholds] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingGoal, setIsSavingGoal] = useState(false);
   const thresholdInputRef = useRef<HTMLInputElement>(null);
